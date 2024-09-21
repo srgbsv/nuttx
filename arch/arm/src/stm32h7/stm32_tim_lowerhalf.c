@@ -84,6 +84,21 @@
 #define STM32_TIM13_RES  16
 #define STM32_TIM14_RES  16
 
+#define STM32_TIM1_BASE             0x40010000
+#define STM32_TIM2_BASE             0x40000000
+#define STM32_TIM3_BASE             0x40000400
+#define STM32_TIM4_BASE             0x40000800
+#define STM32_TIM5_BASE             0x40000c00
+#define STM32_TIM6_BASE             0x40001000
+#define STM32_TIM7_BASE             0x40001400
+#define STM32_TIM8_BASE             0x40010400
+#define STM32_TIM12_BASE            0x40001800
+#define STM32_TIM13_BASE            0x40001c00
+#define STM32_TIM14_BASE            0x40002000
+#define STM32_TIM15_BASE            0x40014000
+#define STM32_TIM16_BASE            0x40014400
+#define STM32_TIM17_BASE            0x40014800
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/

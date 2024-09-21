@@ -92,6 +92,14 @@ ifeq ($(CONFIG_PWM),y)
 CSRCS += stm32_pwm.c
 endif
 
+ifeq ($(CONFIG_CAPTURE),y)
+CSRCS += stm32_capture.c
+endif
+
+ifeq ($(CONFIG_PWM_IN),y)
+CSRCS += stm32_pwm_input.c
+endif
+
 ifeq ($(CONFIG_BOARDCTL_RESET),y)
 CSRCS += stm32_reset.c
 endif

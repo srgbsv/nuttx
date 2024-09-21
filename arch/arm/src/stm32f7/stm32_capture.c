@@ -189,10 +189,12 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
 #endif
 #ifdef GPIO_TIM1_CH1IN
             case 1:
+              syslog(LOG_DEBUG, "Cap gpio channel 1");
               return GPIO_TIM1_CH1IN;
 #endif
 #ifdef GPIO_TIM1_CH2IN
             case 2:
+              syslog(LOG_DEBUG, "Cap gpio channel 2");
               return GPIO_TIM1_CH2IN;
 #endif
 #ifdef GPIO_TIM1_CH3IN
@@ -1070,6 +1072,7 @@ static uint32_t stm32_cap_getcapture(struct stm32_cap_dev_s *dev,
 
 struct stm32_cap_ops_s stm32_cap_ops =
 {
+  .setsmc       = &stm32_cap_setsmc,
   .setclock     = &stm32_cap_setclock,
   .setchannel   = &stm32_cap_setchannel,
   .getcapture   = &stm32_cap_getcapture,

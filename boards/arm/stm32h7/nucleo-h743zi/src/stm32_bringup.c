@@ -372,5 +372,92 @@ int stm32_bringup(void)
   stm32_iwdginitialize("/dev/watchdog0", STM32_LSI_FREQUENCY);
 #endif
 
+#ifdef CONFIG_CAPTURE_22
+  /* Initialize Capture and register the Capture driver. */
+
+  ret = stm32_capture_setup("/dev/capture0");
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_capture_setup failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#ifdef CONFIG_PWM_IN
+
+#if defined(CONFIG_STM32_TIM1)
+  ret = stm32_pwm_input_setup(1);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 1 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#if defined(CONFIG_STM32_TIM2)
+  ret = stm32_pwm_input_setup(2);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 2 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#if defined(CONFIG_STM32_TIM3)
+  ret = stm32_pwm_input_setup(3);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 3 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#if defined(CONFIG_STM32_TIM4)
+  ret = stm32_pwm_input_setup(4);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 4 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#if defined(CONFIG_STM32_TIM5)
+  ret = stm32_pwm_input_setup(5);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 5 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#if defined(CONFIG_STM32_TIM6)
+  ret = stm32_pwm_input_setup(6);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 6 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#if defined(CONFIG_STM32_TIM5)
+  ret = stm32_pwm_input_setup(7);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 7 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#if defined(CONFIG_STM32_TIM8)
+  ret = stm32_pwm_input_setup(8);
+  if (ret < 0)
+  {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_in_setup timer 8 failed: %d\n", ret);
+      return ret;
+  }
+#endif
+
+#endif
+
   return OK;
 }

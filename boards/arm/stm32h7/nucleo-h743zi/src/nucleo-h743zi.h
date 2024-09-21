@@ -377,6 +377,8 @@ int stm32_pca9635_initialize(void);
 int stm32_pwm_setup(void);
 #endif
 
+#define STM32H7_CAPTURETIMER 1
+
 /****************************************************************************
  * Name: stm32_mtd_initialize
  *
@@ -401,6 +403,23 @@ int stm32_progmem_init(void);
 
 #ifdef CONFIG_MMCSD_SPI
 int stm32_mmcsd_initialize(int minor);
+#endif
+
+/****************************************************************************
+ * Name: stm32_capture_setup
+ *
+ * Description:
+ *  Initialize pwm capture support
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_CAPTURE
+int stm32_capture_setup(const char *devpath);
+struct cap_lowerhalf_s *stm32_cap_initialize(int timer);
+#endif
+
+#ifdef CONFIG_PWM_IN
+int stm32_pwm_in_setup(int tnum);
 #endif
 
 #endif /* __BOARDS_ARM_STM32H7_NUCLEO_H743ZI_SRC_NUCLEO_H743ZI_H */

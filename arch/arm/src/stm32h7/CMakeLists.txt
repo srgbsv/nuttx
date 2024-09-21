@@ -190,4 +190,8 @@ if(CONFIG_STM32H7_WWDG)
   list(APPEND SRCS stm32_wwdg.c)
 endif()
 
+if (CONFIG_CAPTURE)
+  list(APPEND stm32_capture.c stm32_capture_lowerhalf.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

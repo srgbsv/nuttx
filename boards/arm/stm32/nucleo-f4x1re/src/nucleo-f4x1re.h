@@ -20,7 +20,6 @@
 
 #ifndef __BOARDS_ARM_STM32_NUCLEO_F401RE_SRC_NUCLEO_F401RE_H
 #define __BOARDS_ARM_STM32_NUCLEO_F401RE_SRC_NUCLEO_F401RE_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -168,7 +167,7 @@
 #define ADC_XOUPUT   1 /* X output is on ADC channel 1 */
 #define ADC_YOUPUT   0 /* Y output is on ADC channel 0 */
 
-#define GPIO_BUTTON_A \
+/*#define GPIO_BUTTON_A \
   (GPIO_INPUT | GPIO_PULLUP |GPIO_EXTI | GPIO_PORTA | GPIO_PIN8)
 #define GPIO_BUTTON_B \
   (GPIO_INPUT | GPIO_PULLUP |GPIO_EXTI | GPIO_PORTB | GPIO_PIN10)
@@ -181,7 +180,7 @@
 #define GPIO_BUTTON_F \
   (GPIO_INPUT | GPIO_PULLUP |GPIO_EXTI | GPIO_PORTA | GPIO_PIN9)
 #define GPIO_BUTTON_G \
-  (GPIO_INPUT | GPIO_PULLUP |GPIO_EXTI | GPIO_PORTC | GPIO_PIN7)
+  (GPIO_INPUT | GPIO_PULLUP |GPIO_EXTI | GPIO_PORTC | GPIO_PIN7)*/
 
 /* Itead Joystick Signal interpretation:
  *
@@ -209,6 +208,11 @@
 #define GPIO_SELECT   GPIO_BUTTON_1
 #define GPIO_FIRE     GPIO_BUTTON_2
 #define GPIO_JUMP     GPIO_BUTTON_3
+
+/*#define BOARD_NGPIO_IN     3   /* Amount of GPIO Input pins
+#define GPIO_IN1          (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN8)
+#define GPIO_IN2          (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN9)
+#define GPIO_IN3          (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN10)
 
 /****************************************************************************
  * Public Data

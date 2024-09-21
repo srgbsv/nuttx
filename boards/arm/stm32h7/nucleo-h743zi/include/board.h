@@ -391,13 +391,16 @@
 
 /* TIM1 */
 
-#define GPIO_TIM1_CH1OUT  (GPIO_TIM1_CH1OUT_2  | GPIO_SPEED_50MHz) /* PE9  - D6 */
-#define GPIO_TIM1_CH1NOUT (GPIO_TIM1_CH1NOUT_3 | GPIO_SPEED_50MHz) /* PE8  - D42 */
-#define GPIO_TIM1_CH2OUT  (GPIO_TIM1_CH2OUT_2  | GPIO_SPEED_50MHz) /* PE11 - D5 */
-#define GPIO_TIM1_CH2NOUT (GPIO_TIM1_CH2NOUT_3 | GPIO_SPEED_50MHz) /* PE10 - D40 */
-#define GPIO_TIM1_CH3OUT  (GPIO_TIM1_CH3OUT_2  | GPIO_SPEED_50MHz) /* PE13 - D3 */
-#define GPIO_TIM1_CH3NOUT (GPIO_TIM1_CH3NOUT_3 | GPIO_SPEED_50MHz) /* PE12 - D39 */
-#define GPIO_TIM1_CH4OUT  (GPIO_TIM1_CH4OUT_2  | GPIO_SPEED_50MHz) /* PE14 - D38 */
+//#define GPIO_TIM1_CH1OUT  (GPIO_TIM1_CH1OUT_2  | GPIO_SPEED_50MHz) /* PE9  - D6 */
+//#define GPIO_TIM1_CH1NOUT (GPIO_TIM1_CH1NOUT_3 | GPIO_SPEED_50MHz) /* PE8  - D42 */
+//#define GPIO_TIM1_CH2OUT  (GPIO_TIM1_CH2OUT_2  | GPIO_SPEED_50MHz) /* PE11 - D5 */
+//#define GPIO_TIM1_CH2NOUT (GPIO_TIM1_CH2NOUT_3 | GPIO_SPEED_50MHz) /* PE10 - D40 */
+//#define GPIO_TIM1_CH3OUT  (GPIO_TIM1_CH3OUT_2  | GPIO_SPEED_50MHz) /* PE13 - D3 */
+//#define GPIO_TIM1_CH3NOUT (GPIO_TIM1_CH3NOUT_3 | GPIO_SPEED_50MHz) /* PE12 - D39 */
+//#define GPIO_TIM1_CH4OUT  (GPIO_TIM1_CH4OUT_2  | GPIO_SPEED_50MHz) /* PE14 - D38 */
+
+//#define GPIO_TIM1_CH1IN   (GPIO_TIM1_CH1IN_1|GPIO_SPEED_50MHz)   /* PE9 */
+//#define GPIO_TIM1_CH2IN   (GPIO_TIM1_CH1IN_2|GPIO_SPEED_50MHz)   /* PE9 */
 
 /* OTGFS */
 
@@ -412,6 +415,55 @@
 
 #define DMAMAP_USART6_RX DMAMAP_DMA12_USART6RX_1
 #define DMAMAP_USART6_TX DMAMAP_DMA12_USART6TX_0
+
+/* FROM STMCube
+ */
+/********************  Bit definition for RCC_APB2ENR register  ******************/
+#define RCC_APB2ENR_TIM1EN_Pos                 (0U)
+#define RCC_APB2ENR_TIM1EN_Msk                 (0x1UL << RCC_APB2ENR_TIM1EN_Pos) /*!< 0x00000001 */
+#define RCC_APB2ENR_TIM1EN                     RCC_APB2ENR_TIM1EN_Msk
+#define RCC_APB2ENR_TIM8EN_Pos                 (1U)
+#define RCC_APB2ENR_TIM8EN_Msk                 (0x1UL << RCC_APB2ENR_TIM8EN_Pos) /*!< 0x00000002 */
+#define RCC_APB2ENR_TIM8EN                     RCC_APB2ENR_TIM8EN_Msk
+#define RCC_APB2ENR_USART1EN_Pos               (4U)
+#define RCC_APB2ENR_USART1EN_Msk               (0x1UL << RCC_APB2ENR_USART1EN_Pos) /*!< 0x00000010 */
+#define RCC_APB2ENR_USART1EN                   RCC_APB2ENR_USART1EN_Msk
+#define RCC_APB2ENR_USART6EN_Pos               (5U)
+#define RCC_APB2ENR_USART6EN_Msk               (0x1UL << RCC_APB2ENR_USART6EN_Pos) /*!< 0x00000020 */
+#define RCC_APB2ENR_USART6EN                   RCC_APB2ENR_USART6EN_Msk
+#define RCC_APB2ENR_SPI1EN_Pos                 (12U)
+#define RCC_APB2ENR_SPI1EN_Msk                 (0x1UL << RCC_APB2ENR_SPI1EN_Pos) /*!< 0x00001000 */
+#define RCC_APB2ENR_SPI1EN                     RCC_APB2ENR_SPI1EN_Msk
+#define RCC_APB2ENR_SPI4EN_Pos                 (13U)
+#define RCC_APB2ENR_SPI4EN_Msk                 (0x1UL << RCC_APB2ENR_SPI4EN_Pos) /*!< 0x00002000 */
+#define RCC_APB2ENR_SPI4EN                     RCC_APB2ENR_SPI4EN_Msk
+#define RCC_APB2ENR_TIM15EN_Pos                (16U)
+#define RCC_APB2ENR_TIM15EN_Msk                (0x1UL << RCC_APB2ENR_TIM15EN_Pos) /*!< 0x00010000 */
+#define RCC_APB2ENR_TIM15EN                    RCC_APB2ENR_TIM15EN_Msk
+#define RCC_APB2ENR_TIM16EN_Pos                (17U)
+#define RCC_APB2ENR_TIM16EN_Msk                (0x1UL << RCC_APB2ENR_TIM16EN_Pos) /*!< 0x00020000 */
+#define RCC_APB2ENR_TIM16EN                    RCC_APB2ENR_TIM16EN_Msk
+#define RCC_APB2ENR_TIM17EN_Pos                (18U)
+#define RCC_APB2ENR_TIM17EN_Msk                (0x1UL << RCC_APB2ENR_TIM17EN_Pos) /*!< 0x00040000 */
+#define RCC_APB2ENR_TIM17EN                    RCC_APB2ENR_TIM17EN_Msk
+#define RCC_APB2ENR_SPI5EN_Pos                 (20U)
+#define RCC_APB2ENR_SPI5EN_Msk                 (0x1UL << RCC_APB2ENR_SPI5EN_Pos) /*!< 0x00100000 */
+#define RCC_APB2ENR_SPI5EN                     RCC_APB2ENR_SPI5EN_Msk
+#define RCC_APB2ENR_SAI1EN_Pos                 (22U)
+#define RCC_APB2ENR_SAI1EN_Msk                 (0x1UL << RCC_APB2ENR_SAI1EN_Pos) /*!< 0x00400000 */
+#define RCC_APB2ENR_SAI1EN                     RCC_APB2ENR_SAI1EN_Msk
+#define RCC_APB2ENR_SAI2EN_Pos                 (23U)
+#define RCC_APB2ENR_SAI2EN_Msk                 (0x1UL << RCC_APB2ENR_SAI2EN_Pos) /*!< 0x00800000 */
+#define RCC_APB2ENR_SAI2EN                     RCC_APB2ENR_SAI2EN_Msk
+#define RCC_APB2ENR_SAI3EN_Pos                 (24U)
+#define RCC_APB2ENR_SAI3EN_Msk                 (0x1UL << RCC_APB2ENR_SAI3EN_Pos) /*!< 0x01000000 */
+#define RCC_APB2ENR_SAI3EN                     RCC_APB2ENR_SAI3EN_Msk
+#define RCC_APB2ENR_DFSDM1EN_Pos               (28U)
+#define RCC_APB2ENR_DFSDM1EN_Msk               (0x1UL << RCC_APB2ENR_DFSDM1EN_Pos) /*!< 0x10000000 */
+#define RCC_APB2ENR_DFSDM1EN                   RCC_APB2ENR_DFSDM1EN_Msk
+#define RCC_APB2ENR_HRTIMEN_Pos                (29U)
+#define RCC_APB2ENR_HRTIMEN_Msk                (0x1UL << RCC_APB2ENR_HRTIMEN_Pos) /*!< 0x20000000 */
+#define RCC_APB2ENR_HRTIMEN                    RCC_APB2ENR_HRTIMEN_Msk
 
 /****************************************************************************
  * Public Data
