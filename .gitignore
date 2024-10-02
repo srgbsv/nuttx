@@ -75,3 +75,5 @@ imx9-sdimage.img
 kwarning
 SAVEMake.defs
 SAVEconfig
+cmake-build*
+.idea

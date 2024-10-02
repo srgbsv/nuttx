@@ -94,6 +94,14 @@ if(CONFIG_CAPTURE)
   list(APPEND SRCS stm32_capture.c)
 endif()
 
+if (CONFIG_PWM_INPUT)
+  list(APPEND SRCS stm32_pwm_input.c)
+endif()
+
+if (CONFIG_PWM_OUT)
+  list(APPEND SRCS stm32_pwm_output.c)
+endif()
+
 if(CONFIG_BOARDCTL_RESET)
   list(APPEND SRCS stm32_reset.c)
 endif()
