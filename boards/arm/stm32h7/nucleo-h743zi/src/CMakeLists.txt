@@ -95,11 +95,11 @@ if(CONFIG_CAPTURE)
 endif()
 
 if (CONFIG_PWM_INPUT)
-  list(APPEND SRCS stm32_pwm_input.c)
+  list(APPEND SRCS stm32_pwm_in.c)
 endif()
 
-if (CONFIG_PWM_OUT)
-  list(APPEND SRCS stm32_pwm_output.c)
+if (CONFIG_PWM_OUTPUT)
+  list(APPEND SRCS stm32_pwm_out.c)
 endif()
 
 if(CONFIG_BOARDCTL_RESET)

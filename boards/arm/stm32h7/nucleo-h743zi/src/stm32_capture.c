@@ -50,7 +50,7 @@
 
 #define HAVE_CAPTURE 1
 
-#ifndef CONFIG_CAPTURE
+#ifndef CONFIG_CAPTURE333
 #  undef HAVE_CAPTURE
 #endif
 

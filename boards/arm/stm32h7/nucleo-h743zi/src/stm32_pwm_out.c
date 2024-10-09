@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/stm32f4discovery/src/stm32_pwm_input.c
+ * boards/arm/stm32/stm32f4discovery/src/stm32_pwm_output.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -35,10 +35,10 @@
 #include "stm32.h"
 #include "stm32_capture.h"
 #include "arm_internal.h"
+#include <syslog.h>
 
 #include "nucleo-h743zi.h"
 
-#if defined(CONFIG_CAPTURE)
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -47,10 +47,14 @@
  *
  */
 
-#define HAVE_PWM_INPUT 1
+#define HAVE_PWM_OUTPUT 1
 
-#if ! defined(CONFIG_PWM_INPUT)
-#  undef HAVE_PWM_INPUT
+#if !defined(CONFIG_PWM)
+#  undef HAVE_PWM_OUTPUT
+#endif
+
+#if !defined(CONFIG_PWM_OUTPUT)
+#  undef HAVE_PWM_OUTPUT
 #endif
 
 #if ! defined(CONFIG_STM32_TIM1) \
@@ -61,53 +65,79 @@
     && ! defined(CONFIG_STM32_TIM6) \
     && ! defined(CONFIG_STM32_TIM7) \
     && ! defined(CONFIG_STM32_TIM8)
-#  undef HAVE_PWM_INPUT
+#  undef HAVE_PWM_OUTPUT
 #endif
 
+#if ! defined(CONFIG_STM32_TIM1_PWM) \
+    && ! defined(CONFIG_STM32_TIM2_PWM) \
+    && ! defined(CONFIG_STM32_TIM3_PWM) \
+    && ! defined(CONFIG_STM32_TIM4_PWM)\
+    && ! defined(CONFIG_STM32_TIM5_PWM) \
+    && ! defined(CONFIG_STM32_TIM6_PWM) \
+    && ! defined(CONFIG_STM32_TIM7_PWM) \
+    && ! defined(CONFIG_STM32_TIM8_PWM)
+#  undef HAVE_PWM_OUTPUT
+#endif
+
+#ifdef HAVE_PWM_OUTPUT
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: stm32_pwm_input_setup
+ * Name: stm32_pwm_out_setup
  *
  * Description:
- *   Initialize and register the pwm_input driver.
+ *   Initialize and register the pwm_output driver.
  *
  * Input parameters:
- *   timer num - Capture timer num (1-8)
+ *   timer num - Output timer num (1-8)
  *
  * Returned Value:
  *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
-
-int stm32_pwm_input_setup(int tnum)
+int stm32_pwm_out_setup(int tnum)
 {
-#ifdef HAVE_PWM_INPUT
-  syslog(LOG_ERR, "HAVE_PWM_INPUT defined\n");
-  struct cap_lowerhalf_s *capture;
+#ifdef HAVE_PWM_OUTPUT
+  static bool initialized[12];
+  struct pwm_lowerhalf_s *pwm;
   int ret;
 
-  capture = stm32_cap_initialize(tnum);
+  /* Have we already initialized? */
 
-  char devpath[12];
-  sprintf(devpath, "/dev/pwmin%d", tnum);
+  if (!initialized[tnum])
+  {
+    /* Get an instance of the PWM interface */
 
-  /* Then register the pwm capture sensor */
-
-  ret = cap_register(devpath, capture);
-  if (ret < 0)
+    pwm = stm32_pwminitialize(tnum);
+    if (!pwm)
     {
-      syslog(LOG_ERR, "Error registering capture\n");
-      mtrerr("ERROR: Error registering capture\n");
+      syslog(LOG_ERR, "Failed to initialize pwm");
+      tmrerr("ERROR: Failed to get the STM32 PWM lower half\n");
+      return -ENODEV;
     }
 
-  return ret;
+    char devpath[13];
+    sprintf(devpath, "/dev/pwmout%d", tnum);
+
+    ret = pwm_register(devpath, pwm);
+    if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to register pwm");
+      tmrerr("ERROR: pwm_register failed: %d\n", ret);
+      return ret;
+    }
+
+    /* Now we are initialized */
+
+    initialized[tnum] = true;
+  }
+
+  return OK;
 #else
-  syslog(LOG_ERR, "HAVE_PWM_INPUT not defined\n");
   return -ENODEV;
 #endif
 }
 
-#endif /* CONFIG_CAPTURE */
+#endif /* HAVE_PWM_OUTPUT */

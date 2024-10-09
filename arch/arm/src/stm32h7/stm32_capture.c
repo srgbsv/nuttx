@@ -47,31 +47,31 @@
 
 /* Configuration ************************************************************/
 
-#if defined(GPIO_TIM1_CH1IN) || defined(GPIO_TIM2_CH1IN) || \
-    defined(GPIO_TIM3_CH1IN) || defined(GPIO_TIM4_CH1IN) || \
-    defined(GPIO_TIM5_CH1IN) || defined(GPIO_TIM8_CH1IN) || \
-    defined(GPIO_TIM9_CH1IN) || defined(GPIO_TIM10_CH1IN) || \
-    defined(GPIO_TIM11_CH1IN) || defined(GPIO_TIM12_CH1IN) || \
-    defined(GPIO_TIM13_CH1IN) || defined(GPIO_TIM14_CH1IN)
+#if defined(GPIO_TIM1_CH1IN_1) || defined(GPIO_TIM2_CH1IN_1) || \
+    defined(GPIO_TIM3_CH1IN_1) || defined(GPIO_TIM4_CH1IN_1) || \
+    defined(GPIO_TIM5_CH1IN_1) || defined(GPIO_TIM8_CH1IN_1) || \
+    defined(GPIO_TIM9_CH1IN_1) || defined(GPIO_TIM10_CH1IN_1) || \
+    defined(GPIO_TIM11_CH1IN_1) || defined(GPIO_TIM12_CH1IN_1) || \
+    defined(GPIO_TIM13_CH1IN_1) || defined(GPIO_TIM14_CH1IN_1)
 #  define HAVE_CH1IN 1
 #endif
 
-#if defined(GPIO_TIM1_CH2IN) || defined(GPIO_TIM2_CH2IN) || \
-    defined(GPIO_TIM3_CH2IN) || defined(GPIO_TIM4_CH2IN) || \
-    defined(GPIO_TIM5_CH2IN) || defined(GPIO_TIM8_CH2IN) || \
-    defined(GPIO_TIM9_CH2IN) || defined(GPIO_TIM12_CH2IN)
+#if defined(GPIO_TIM1_CH2IN_1) || defined(GPIO_TIM2_CH2IN_1) || \
+    defined(GPIO_TIM3_CH2IN_1) || defined(GPIO_TIM4_CH2IN_1) || \
+    defined(GPIO_TIM5_CH2IN_1) || defined(GPIO_TIM8_CH2IN_1) || \
+    defined(GPIO_TIM9_CH2IN_1) || defined(GPIO_TIM12_CH2IN_1)
 #  define HAVE_CH2IN 1
 #endif
 
-#if defined(GPIO_TIM1_CH3IN) || defined(GPIO_TIM2_CH3IN) || \
-    defined(GPIO_TIM3_CH3IN) || defined(GPIO_TIM4_CH3IN) || \
-    defined(GPIO_TIM5_CH3IN) || defined(GPIO_TIM8_CH3IN)
+#if defined(GPIO_TIM1_CH3IN_1) || defined(GPIO_TIM2_CH3IN_1) || \
+    defined(GPIO_TIM3_CH3IN_1) || defined(GPIO_TIM4_CH3IN_1) || \
+    defined(GPIO_TIM5_CH3IN_1) || defined(GPIO_TIM8_CH3IN_1)
 #  define HAVE_CH3IN 1
 #endif
 
-#if defined(GPIO_TIM1_CH4IN) || defined(GPIO_TIM2_CH4IN) || \
-    defined(GPIO_TIM3_CH4IN) || defined(GPIO_TIM4_CH4IN) || \
-    defined(GPIO_TIM5_CH4IN) || defined(GPIO_TIM8_CH4IN)
+#if defined(GPIO_TIM1_CH4IN_1) || defined(GPIO_TIM2_CH4IN_1) || \
+    defined(GPIO_TIM3_CH4IN_1) || defined(GPIO_TIM4_CH4IN_1) || \
+    defined(GPIO_TIM5_CH4IN_1) || defined(GPIO_TIM8_CH4IN_1)
 #  define HAVE_CH4IN 1
 #endif
 
@@ -90,18 +90,18 @@
  * intended for some other purpose.
  */
 
-#if defined(CONFIG_STM32H7_TIM1_CAP)  || \
-    defined(CONFIG_STM32H7_TIM2_CAP)  || \
-    defined(CONFIG_STM32H7_TIM3_CAP)  || \
-    defined(CONFIG_STM32H7_TIM4_CAP)  || \
-    defined(CONFIG_STM32H7_TIM5_CAP)  || \
-    defined(CONFIG_STM32H7_TIM8_CAP)  || \
-    defined(CONFIG_STM32H7_TIM9_CAP)  || \
-    defined(CONFIG_STM32H7_TIM10_CAP) || \
-    defined(CONFIG_STM32H7_TIM11_CAP) || \
-    defined(CONFIG_STM32H7_TIM12_CAP) || \
-    defined(CONFIG_STM32H7_TIM13_CAP) || \
-    defined(CONFIG_STM32H7_TIM14_CAP)
+#if defined(CONFIG_STM32_TIM1_CAP)  || \
+    defined(CONFIG_STM32_TIM2_CAP)  || \
+    defined(CONFIG_STM32_TIM3_CAP)  || \
+    defined(CONFIG_STM32_TIM4_CAP)  || \
+    defined(CONFIG_STM32_TIM5_CAP)  || \
+    defined(CONFIG_STM32_TIM6_CAP)  || \
+    defined(CONFIG_STM32_TIM7_CAP)  || \
+    defined(CONFIG_STM32_TIM8_CAP) || \
+    defined(CONFIG_STM32_TIM9_CAP) || \
+    defined(CONFIG_STM32_TIM10_CAP) || \
+    defined(CONFIG_STM32_TIM11_CAP) || \
+    defined(CONFIG_STM32_TIM12_CAP)
 
 /****************************************************************************
  * Private Types
@@ -180,7 +180,7 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
 {
   switch (priv->base)
     {
-#ifdef CONFIG_STM32H7_TIM1_CAP
+#ifdef CONFIG_STM32_TIM1_CAP
       case STM32_TIM1_BASE:
         switch (channel)
           {
@@ -188,26 +188,26 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM1_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM1_CH1IN
+#ifdef GPIO_TIM1_CH1IN_1
             case 1:
-              return GPIO_TIM1_CH1IN;
+              return GPIO_TIM1_CH1IN_1;
 #endif
-#ifdef GPIO_TIM1_CH2IN
+#ifdef GPIO_TIM1_CH2IN_1
             case 2:
-              return GPIO_TIM1_CH2IN;
+              return GPIO_TIM1_CH2IN_1;
 #endif
-#ifdef GPIO_TIM1_CH3IN
+#ifdef GPIO_TIM1_CH3IN_1
             case 3:
-              return GPIO_TIM1_CH3IN;
+              return GPIO_TIM1_CH3IN_1;
 #endif
-#ifdef GPIO_TIM1_CH4IN
+#ifdef GPIO_TIM1_CH4IN_1
             case 4:
-              return GPIO_TIM1_CH4IN;
+              return GPIO_TIM1_CH4IN_1;
 #endif
           }
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM2_CAP
+#ifdef CONFIG_STM32_TIM2_CAP
       case STM32_TIM2_BASE:
         switch (channel)
           {
@@ -215,26 +215,26 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM2_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM2_CH1IN
+#ifdef GPIO_TIM2_CH1IN_1
             case 1:
-              return GPIO_TIM2_CH1IN;
+              return GPIO_TIM2_CH1IN_1;
 #endif
-#ifdef GPIO_TIM2_CH2IN
+#ifdef GPIO_TIM2_CH2IN_1
             case 2:
-              return GPIO_TIM2_CH2IN;
+              return GPIO_TIM2_CH2IN_1;
 #endif
-#ifdef GPIO_TIM2_CH3IN
+#ifdef GPIO_TIM2_CH3IN_1
             case 3:
-              return GPIO_TIM2_CH3IN;
+              return GPIO_TIM2_CH3IN_1;
 #endif
-#ifdef GPIO_TIM2_CH4IN
+#ifdef GPIO_TIM2_CH4IN_1
             case 4:
-              return GPIO_TIM2_CH4IN;
+              return GPIO_TIM2_CH4IN_1;
 #endif
           }
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM3_CAP
+#ifdef CONFIG_STM32_TIM3_CAP
       case STM32_TIM3_BASE:
         switch (channel)
           {
@@ -242,26 +242,26 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM3_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM3_CH1IN
+#ifdef GPIO_TIM3_CH1IN_1
             case 1:
-              return GPIO_TIM3_CH1IN;
+              return GPIO_TIM3_CH1IN_1;
 #endif
-#ifdef GPIO_TIM3_CH2IN
+#ifdef GPIO_TIM3_CH2IN_1
             case 2:
-              return GPIO_TIM3_CH2IN;
+              return GPIO_TIM3_CH2IN_1;
 #endif
-#ifdef GPIO_TIM3_CH3IN
+#ifdef GPIO_TIM3_CH3IN_1
             case 3:
-              return GPIO_TIM3_CH3IN;
+              return GPIO_TIM3_CH3IN_1;
 #endif
-#ifdef GPIO_TIM3_CH4IN
+#ifdef GPIO_TIM3_CH4IN_1
             case 4:
-              return GPIO_TIM3_CH4IN;
+              return GPIO_TIM3_CH4IN_1;
 #endif
           }
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM4_CAP
+#ifdef CONFIG_STM32_TIM4_CAP
       case STM32_TIM4_BASE:
         switch (channel)
           {
@@ -269,26 +269,26 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM4_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM4_CH1IN
+#ifdef GPIO_TIM4_CH1IN_1
             case 1:
-              return GPIO_TIM4_CH1IN;
+              return GPIO_TIM4_CH1IN_1;
 #endif
-#ifdef GPIO_TIM4_CH2IN
+#ifdef GPIO_TIM4_CH2IN_1
             case 2:
-              return GPIO_TIM4_CH2IN;
+              return GPIO_TIM4_CH2IN_1;
 #endif
-#ifdef GPIO_TIM4_CH3IN
+#ifdef GPIO_TIM4_CH3IN_1
             case 3:
-              return GPIO_TIM4_CH3IN;
+              return GPIO_TIM4_CH3IN_1;
 #endif
-#ifdef GPIO_TIM4_CH4IN
+#ifdef GPIO_TIM4_CH4IN_1
             case 4:
-              return GPIO_TIM4_CH4IN;
+              return GPIO_TIM4_CH4IN_1;
 #endif
           }
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM5_CAP
+#ifdef CONFIG_STM32_TIM5_CAP
       case STM32_TIM5_BASE:
         switch (channel)
           {
@@ -296,21 +296,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM5_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM5_CH1IN
+#ifdef GPIO_TIM5_CH1IN_1
             case 1:
-              return GPIO_TIM5_CH1IN;
+              return GPIO_TIM5_CH1IN_1;
 #endif
-#ifdef GPIO_TIM5_CH2IN
+#ifdef GPIO_TIM5_CH2IN_1
             case 2:
-              return GPIO_TIM5_CH2IN;
+              return GPIO_TIM5_CH2IN_1;
 #endif
-#ifdef GPIO_TIM5_CH3IN
+#ifdef GPIO_TIM5_CH3IN_1
             case 3:
-              return GPIO_TIM5_CH3IN;
+              return GPIO_TIM5_CH3IN_1;
 #endif
-#ifdef GPIO_TIM5_CH4IN
+#ifdef GPIO_TIM5_CH4IN_1
             case 4:
-              return GPIO_TIM5_CH4IN;
+              return GPIO_TIM5_CH4IN_1;
 #endif
           }
         break;
@@ -326,21 +326,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM8_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM8_CH1IN
+#ifdef GPIO_TIM8_CH1IN_1
             case 1:
-              return GPIO_TIM8_CH1IN;
+              return GPIO_TIM8_CH1IN_1;
 #endif
-#ifdef GPIO_TIM8_CH2IN
+#ifdef GPIO_TIM8_CH2IN_1
             case 2:
-              return GPIO_TIM8_CH2IN;
+              return GPIO_TIM8_CH2IN_1;
 #endif
-#ifdef GPIO_TIM8_CH3IN
+#ifdef GPIO_TIM8_CH3IN_1
             case 3:
-              return GPIO_TIM8_CH3IN;
+              return GPIO_TIM8_CH3IN_1;
 #endif
-#ifdef GPIO_TIM8_CH4IN
+#ifdef GPIO_TIM8_CH4IN_1
             case 4:
-              return GPIO_TIM8_CH4IN;
+              return GPIO_TIM8_CH4IN_1;
 #endif
           }
         break;
@@ -354,21 +354,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM9_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM9_CH1IN
+#ifdef GPIO_TIM9_CH1IN_1
             case 1:
-              return GPIO_TIM9_CH1IN;
+              return GPIO_TIM9_CH1IN_1;
 #endif
-#ifdef GPIO_TIM9_CH2IN
+#ifdef GPIO_TIM9_CH2IN_1
             case 2:
-              return GPIO_TIM9_CH2IN;
+              return GPIO_TIM9_CH2IN_1;
 #endif
-#ifdef GPIO_TIM9_CH3IN
+#ifdef GPIO_TIM9_CH3IN_1
             case 3:
-              return GPIO_TIM9_CH3IN;
+              return GPIO_TIM9_CH3IN_1;
 #endif
-#ifdef GPIO_TIM9_CH4IN
+#ifdef GPIO_TIM9_CH4IN_1
             case 4:
-              return GPIO_TIM9_CH4IN;
+              return GPIO_TIM9_CH4IN_1;
 #endif
           }
         break;
@@ -382,21 +382,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM10_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM10_CH1IN
+#ifdef GPIO_TIM10_CH1IN_1
             case 1:
-              return GPIO_TIM10_CH1IN;
+              return GPIO_TIM10_CH1IN_1;
 #endif
-#ifdef GPIO_TIM10_CH2IN
+#ifdef GPIO_TIM10_CH2IN_1
             case 2:
-              return GPIO_TIM10_CH2IN;
+              return GPIO_TIM10_CH2IN_1;
 #endif
-#ifdef GPIO_TIM10_CH4IN
+#ifdef GPIO_TIM10_CH4IN_1
             case 3:
-              return GPIO_TIM10_CH4IN;
+              return GPIO_TIM10_CH4IN_1;
 #endif
-#ifdef GPIO_TIM10_CH5IN
+#ifdef GPIO_TIM10_CH5IN_1
             case 4:
-              return GPIO_TIM10_CH5IN;
+              return GPIO_TIM10_CH5IN_1;
 #endif
           }
         break;
@@ -410,21 +410,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM11_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM11_CH1IN
+#ifdef GPIO_TIM11_CH1IN_1
             case 1:
-              return GPIO_TIM11_CH1IN;
+              return GPIO_TIM11_CH1IN_1;
 #endif
-#ifdef GPIO_TIM11_CH2IN
+#ifdef GPIO_TIM11_CH2IN_1
             case 2:
-              return GPIO_TIM11_CH2IN;
+              return GPIO_TIM11_CH2IN_1;
 #endif
-#ifdef GPIO_TIM11_CH4IN
+#ifdef GPIO_TIM11_CH4IN_1
             case 3:
-              return GPIO_TIM11_CH4IN;
+              return GPIO_TIM11_CH4IN_1;
 #endif
-#ifdef GPIO_TIM11_CH5IN
+#ifdef GPIO_TIM11_CH5IN_1
             case 4:
-              return GPIO_TIM11_CH5IN;
+              return GPIO_TIM11_CH5IN_1;
 #endif
           }
         break;
@@ -438,21 +438,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM12_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM12_CH1IN
+#ifdef GPIO_TIM12_CH1IN_1
             case 1:
-              return GPIO_TIM12_CH1IN;
+              return GPIO_TIM12_CH1IN_1;
 #endif
-#ifdef GPIO_TIM12_CH2IN
+#ifdef GPIO_TIM12_CH2IN_1
             case 2:
-              return GPIO_TIM12_CH2IN;
+              return GPIO_TIM12_CH2IN_1;
 #endif
-#ifdef GPIO_TIM12_CH4IN
+#ifdef GPIO_TIM12_CH4IN_1
             case 3:
-              return GPIO_TIM12_CH4IN;
+              return GPIO_TIM12_CH4IN_1;
 #endif
-#ifdef GPIO_TIM12_CH5IN
+#ifdef GPIO_TIM12_CH5IN_1
             case 4:
-              return GPIO_TIM12_CH5IN;
+              return GPIO_TIM12_CH5IN_1;
 #endif
           }
         break;
@@ -466,21 +466,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM13_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM13_CH1IN
+#ifdef GPIO_TIM13_CH1IN_1
             case 1:
-              return GPIO_TIM13_CH1IN;
+              return GPIO_TIM13_CH1IN_1;
 #endif
-#ifdef GPIO_TIM13_CH2IN
+#ifdef GPIO_TIM13_CH2IN_1
             case 2:
-              return GPIO_TIM13_CH2IN;
+              return GPIO_TIM13_CH2IN_1;
 #endif
-#ifdef GPIO_TIM13_CH4IN
+#ifdef GPIO_TIM13_CH4IN_1
             case 3:
-              return GPIO_TIM13_CH4IN;
+              return GPIO_TIM13_CH4IN_1;
 #endif
-#ifdef GPIO_TIM13_CH5IN
+#ifdef GPIO_TIM13_CH5IN_1
             case 4:
-              return GPIO_TIM13_CH5IN;
+              return GPIO_TIM13_CH5IN_1;
 #endif
           }
         break;
@@ -494,21 +494,21 @@ stm32_cap_gpio(const struct stm32_cap_priv_s *priv, int channel)
             case STM32_CAP_CHANNEL_COUNTER:
               return GPIO_TIM14_EXT_CLK_IN;
 #endif
-#ifdef GPIO_TIM14_CH1IN
+#ifdef GPIO_TIM14_CH1IN_1
             case 1:
-              return GPIO_TIM14_CH1IN;
+              return GPIO_TIM14_CH1IN_1;
 #endif
-#ifdef GPIO_TIM14_CH2IN
+#ifdef GPIO_TIM14_CH2IN_1
             case 2:
-              return GPIO_TIM14_CH2IN;
+              return GPIO_TIM14_CH2IN_1;
 #endif
-#ifdef GPIO_TIM14_CH4IN
+#ifdef GPIO_TIM14_CH4IN_1
             case 3:
-              return GPIO_TIM14_CH4IN;
+              return GPIO_TIM14_CH4IN_1;
 #endif
-#ifdef GPIO_TIM14_CH5IN
+#ifdef GPIO_TIM14_CH5IN_1
             case 4:
-              return GPIO_TIM14_CH5IN;
+              return GPIO_TIM14_CH5IN_1;
 #endif
           }
         break;
@@ -526,31 +526,31 @@ static inline int stm32_cap_set_rcc(const struct stm32_cap_priv_s *priv,
 
   switch (priv->base)
     {
-#ifdef CONFIG_STM32H7_TIM1_CAP
+#ifdef CONFIG_STM32_TIM1_CAP
       case STM32_TIM1_BASE:
         offset = STM32_RCC_APB2ENR;
         mask   = RCC_APB2ENR_TIM1EN;
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM2_CAP
+#ifdef CONFIG_STM32_TIM2_CAP
       case STM32_TIM2_BASE:
         offset = STM32_RCC_APB1LENR;
         mask   = RCC_APB1LENR_TIM2EN;
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM3_CAP
+#ifdef CONFIG_STM32_TIM3_CAP
       case STM32_TIM3_BASE:
         offset = STM32_RCC_APB1ENR;
         mask   = RCC_APB1ENR_TIM3EN;
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM4_CAP
+#ifdef CONFIG_STM32_TIM4_CAP
       case STM32_TIM4_BASE:
         offset = STM32_RCC_APB1ENR;
         mask   = RCC_APB1ENR_TIM4EN;
         break;
 #endif
-#ifdef CONFIG_STM32H7_TIM5_CAP
+#ifdef CONFIG_STM32_TIM5_CAP
       case STM32_TIM5_BASE:
         offset = STM32_RCC_APB1ENR;
         mask   = RCC_APB1ENR_TIM5EN;
@@ -1190,7 +1190,7 @@ struct stm32_cap_ops_s stm32_cap_ops =
   .getflags     = &stm32_cap_getflags
 };
 
-#ifdef CONFIG_STM32H7_TIM1_CAP
+#ifdef CONFIG_STM32_TIM1_CAP
 const struct stm32_cap_priv_s stm32_tim1_priv =
 {
   .ops          = &stm32_cap_ops,
@@ -1202,7 +1202,7 @@ const struct stm32_cap_priv_s stm32_tim1_priv =
 };
 #endif
 
-#ifdef CONFIG_STM32H7_TIM2_CAP
+#ifdef CONFIG_STM32_TIM2_CAP
 const struct stm32_cap_priv_s stm32_tim2_priv =
 {
   .ops          = &stm32_cap_ops,
@@ -1214,7 +1214,7 @@ const struct stm32_cap_priv_s stm32_tim2_priv =
 };
 #endif
 
-#ifdef CONFIG_STM32H7_TIM3_CAP
+#ifdef CONFIG_STM32_TIM3_CAP
 const struct stm32_cap_priv_s stm32_tim3_priv =
 {
   .ops          = &stm32_cap_ops,
@@ -1226,7 +1226,7 @@ const struct stm32_cap_priv_s stm32_tim3_priv =
 };
 #endif
 
-#ifdef CONFIG_STM32H7_TIM4_CAP
+#ifdef CONFIG_STM32_TIM4_CAP
 const struct stm32_cap_priv_s stm32_tim4_priv =
 {
   .ops          = &stm32_cap_ops,
@@ -1238,7 +1238,7 @@ const struct stm32_cap_priv_s stm32_tim4_priv =
 };
 #endif
 
-#ifdef CONFIG_STM32H7_TIM5_CAP
+#ifdef CONFIG_STM32_TIM5_CAP
 const struct stm32_cap_priv_s stm32_tim5_priv =
 {
   .ops          = &stm32_cap_ops,
@@ -1340,23 +1340,23 @@ static inline const struct stm32_cap_priv_s * stm32_cap_get_priv(int timer)
 {
   switch (timer)
     {
-#ifdef CONFIG_STM32H7_TIM1_CAP
+#ifdef CONFIG_STM32_TIM1_CAP
       case 1:
         return &stm32_tim1_priv;
 #endif
-#ifdef CONFIG_STM32H7_TIM2_CAP
+#ifdef CONFIG_STM32_TIM2_CAP
       case 2:
         return &stm32_tim2_priv;
 #endif
-#ifdef CONFIG_STM32H7_TIM3_CAP
+#ifdef CONFIG_STM32_TIM3_CAP
       case 3:
         return &stm32_tim3_priv;
 #endif
-#ifdef CONFIG_STM32H7_TIM4_CAP
+#ifdef CONFIG_STM32_TIM4_CAP
       case 4:
         return &stm32_tim4_priv;
 #endif
-#ifdef CONFIG_STM32H7_TIM5_CAP
+#ifdef CONFIG_STM32_TIM5_CAP
       case 5:
         return &stm32_tim5_priv;
 #endif
