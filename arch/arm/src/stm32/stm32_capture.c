@@ -526,8 +526,8 @@ static inline int stm32_cap_set_rcc(const struct stm32_cap_priv_s *priv,
 #endif
 #ifdef CONFIG_STM32_TIM2_CAP
       case STM32_TIM2_BASE:
-        offset = STM32_RCC_APB1LENR;
-        mask   = RCC_APB1LENR_TIM2EN;
+        offset = STM32_RCC_APB1ENR;
+        mask   = RCC_APB1ENR_TIM2EN;
         break;
 #endif
 #ifdef CONFIG_STM32_TIM3_CAP
