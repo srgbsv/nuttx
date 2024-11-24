@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32/esp32-devkitc/src/esp32_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -362,7 +364,7 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_ESP32_OPENETH
-  ret = esp32_openeth_initialize();
+  ret = esp_openeth_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize Open ETH ethernet.\n");

@@ -35,6 +35,7 @@
 #include "sched/sched.h"
 #include "chip.h"
 #include "signal/signal.h"
+#include "sched/sched.h"
 #include "xtensa.h"
 
 /****************************************************************************
@@ -57,9 +58,11 @@
 int xtensa_swint(int irq, void *context, void *arg)
 {
   uint32_t *regs = (uint32_t *)context;
+  struct tcb_s *tcb = this_task();
+  uintptr_t *new_regs = regs;
   uint32_t cmd;
 
-  DEBUGASSERT(regs != NULL && regs == CURRENT_REGS);
+  DEBUGASSERT(regs != NULL);
 
   cmd = regs[REG_A2];
 
@@ -106,9 +109,9 @@ int xtensa_swint(int irq, void *context, void *arg)
        *   A2 = SYS_restore_context
        *   A3 = restoreregs
        *
-       * In this case, we simply need to set CURRENT_REGS to restore
-       * register area referenced in the saved A3. context == CURRENT_REGS
-       * is the normal exception return.  By setting CURRENT_REGS =
+       * In this case, we simply need to set current_regs to restore
+       * register area referenced in the saved A3. context == current_regs
+       * is the normal exception return.  By setting current_regs =
        * context[A3], we force the return to the saved context referenced
        * in A3.
        */
@@ -116,7 +119,8 @@ int xtensa_swint(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_A3] != 0);
-          CURRENT_REGS = (uint32_t *)regs[REG_A3];
+          new_regs = (uint32_t *)regs[REG_A3];
+          tcb->xcp.regs = (uint32_t *)regs[REG_A3];
         }
         break;
 
@@ -133,15 +137,14 @@ int xtensa_swint(int irq, void *context, void *arg)
        *
        * In this case, we do both: We save the context registers to the save
        * register area reference by the saved contents of A3 and then set
-       * CURRENT_REGS to the save register area referenced by the saved
+       * current_regs to the save register area referenced by the saved
        * contents of A4.
        */
 
       case SYS_switch_context:
         {
-          DEBUGASSERT(regs[REG_A3] != 0 && regs[REG_A4] != 0);
-          *(uint32_t **)regs[REG_A3] = regs;
-          CURRENT_REGS = (uint32_t *)regs[REG_A4];
+          DEBUGASSERT(regs[REG_A4] != 0);
+          new_regs = (uint32_t *)regs[REG_A4];
         }
         break;
 
@@ -419,9 +422,9 @@ int xtensa_swint(int irq, void *context, void *arg)
         break;
     }
 
-  if ((CURRENT_REGS[REG_PS] & PS_EXCM_MASK) != 0)
+  if ((tcb->xcp.regs[REG_PS] & PS_EXCM_MASK) != 0)
     {
-      CURRENT_REGS[REG_PS] &= ~PS_EXCM_MASK;
+      tcb->xcp.regs[REG_PS] &= ~PS_EXCM_MASK;
     }
 
   /* Report what happened.  That might difficult in the case of a context
@@ -429,10 +432,10 @@ int xtensa_swint(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != CURRENT_REGS)
+  if (regs != new_regs)
     {
       svcinfo("SYSCALL Return: Context switch!\n");
-      up_dump_register((void *)CURRENT_REGS);
+      up_dump_register(new_regs);
     }
   else
     {
@@ -440,9 +443,9 @@ int xtensa_swint(int irq, void *context, void *arg)
     }
 #endif
 
-  if (regs != CURRENT_REGS)
+  if (regs != new_regs)
     {
-      restore_critical_section();
+      restore_critical_section(this_task(), this_cpu());
     }
 
   return OK;

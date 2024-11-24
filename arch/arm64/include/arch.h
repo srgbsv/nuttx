@@ -36,6 +36,8 @@
 #  include <stddef.h>
 #endif
 
+#include <nuttx/irq.h>
+
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
@@ -45,9 +47,9 @@
 #  error Only pages sizes of 4096 are currently supported (CONFIG_ARCH_ADDRENV)
 #endif
 
-/* All implementations have 3 levels of page tables */
+/* All implementations have 4 levels of page tables */
 
-#define ARCH_PGT_MAX_LEVELS (3)
+#define ARCH_PGT_MAX_LEVELS (4)
 #define ARCH_SPGTS          (ARCH_PGT_MAX_LEVELS - 1)
 
 #endif /* CONFIG_ARCH_ADDRENV */

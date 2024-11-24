@@ -60,7 +60,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
   /* Are we in an interrupt handler? */
 
-  if (g_current_regs)
+  if (up_current_regs())
     {
       /* Yes, then we have to do things differently.
        * Just copy the g_current_regs into the OLD rtcb.
@@ -84,6 +84,10 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
       /* Update scheduler parameters */
 
       nxsched_resume_scheduler(tcb);
+
+      /* Record the new "running" task */
+
+      g_running_tasks[this_cpu()] = tcb;
 
       /* Switch context to the context of the task at the head of the
        * ready to run list.

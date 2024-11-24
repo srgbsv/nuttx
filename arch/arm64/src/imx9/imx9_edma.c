@@ -980,6 +980,9 @@ DMACH_HANDLE imx9_dmach_alloc(uint16_t dmamux, uint8_t dchpri)
 
       if (imx9_edma_tcdhasmux(dmach->base))
         {
+          /* Set reset value first to CH MUX */
+
+          putreg8(0, base + IMX9_EDMA_CH_MUX_OFFSET);
           dmainfo("CH%d: MUX:%u->%p\n", dmach->chan, dmach->dmamux,
                   (void *)(base + IMX9_EDMA_CH_MUX_OFFSET));
           putreg8(dmach->dmamux, base + IMX9_EDMA_CH_MUX_OFFSET);
@@ -1070,7 +1073,7 @@ void imx9_dmach_free(DMACH_HANDLE handle)
  *
  ****************************************************************************/
 
-int imx9_dmach_xfrsetup(DMACH_HANDLE *handle,
+int imx9_dmach_xfrsetup(DMACH_HANDLE handle,
                         const struct imx9_edma_xfrconfig_s *config)
 {
   struct imx9_dmach_s *dmach = (struct imx9_dmach_s *)handle;
@@ -1336,7 +1339,7 @@ void imx9_dmach_stop(DMACH_HANDLE handle)
  *
  ****************************************************************************/
 
-unsigned int imx9_dmach_getcount(DMACH_HANDLE *handle)
+unsigned int imx9_dmach_getcount(DMACH_HANDLE handle)
 {
   struct imx9_dmach_s *dmach = (struct imx9_dmach_s *)handle;
   uintptr_t base = IMX9_EDMA_TCD(dmach->base, dmach->chan);

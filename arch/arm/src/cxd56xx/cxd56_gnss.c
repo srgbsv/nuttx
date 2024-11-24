@@ -40,6 +40,7 @@
 #include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/spi/spi.h>
+#include <nuttx/arch.h>
 
 #include <arch/chip/gnss.h>
 #include <arch/chip/pm.h>
@@ -2294,7 +2295,7 @@ cxd56_gnss_read_cep_file(struct file *fp, int32_t offset,
       if (offset + len > g_ceplen)
         {
           ret = -ENOENT;
-          goto _err0;
+          goto err0;
         }
 
       buf = &g_cepdata[offset];

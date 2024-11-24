@@ -1,6 +1,8 @@
 # ##############################################################################
 # cmake/nuttx_add_romfs.cmake
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -17,6 +19,20 @@
 # the License.
 #
 # ##############################################################################
+
+function(add_board_rcsrcs)
+  set_property(
+    TARGET board
+    APPEND
+    PROPERTY BOARD_RCSRCS ${ARGN})
+endfunction()
+
+function(add_board_rcraws)
+  set_property(
+    TARGET board
+    APPEND
+    PROPERTY BOARD_RCRAWS ${ARGN})
+endfunction()
 
 # ~~~
 # nuttx_add_romfs
@@ -57,34 +73,66 @@ function(nuttx_add_romfs)
     message(FATAL_ERROR "Either PATH or FILES must be specified")
   endif()
 
+  if(TARGET board)
+    get_property(
+      board_rcsrcs
+      TARGET board
+      PROPERTY BOARD_RCSRCS)
+    get_property(
+      board_rcraws
+      TARGET board
+      PROPERTY BOARD_RCRAWS)
+    list(PREPEND RCSRCS ${board_rcsrcs})
+    list(PREPEND RCRAWS ${board_rcraws})
+  endif()
+
   foreach(rcsrc ${RCSRCS})
-    get_filename_component(rcpath ${rcsrc} DIRECTORY)
-    separate_arguments(CMAKE_C_FLAG_ARGS NATIVE_COMMAND ${CMAKE_C_FLAGS})
-    add_custom_command(
-      OUTPUT ${rcsrc}
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${rcpath}
-      COMMAND
-        ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c
-        -I${CMAKE_BINARY_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/${rcsrc} >
-        ${rcsrc}
-      DEPENDS nuttx_context ${CMAKE_CURRENT_SOURCE_DIR}/${rcsrc})
-    list(APPEND DEPENDS ${rcsrc})
+    if(IS_ABSOLUTE ${rcsrc})
+      string(REGEX REPLACE "^(.*)/etc(/.*)?$" "\\1" SOURCE_ETC_PREFIX
+                           "${rcsrc}")
+      string(REGEX REPLACE "^.*/(etc(/.*)?)$" "\\1" REMAINING_PATH "${rcsrc}")
+      string(REGEX REPLACE "^/" "" SOURCE_ETC_SUFFIX "${REMAINING_PATH}")
+    else()
+      set(SOURCE_ETC_PREFIX ${CMAKE_CURRENT_SOURCE_DIR})
+      set(SOURCE_ETC_SUFFIX ${rcsrc})
+    endif()
+
+    get_filename_component(rcpath ${SOURCE_ETC_SUFFIX} DIRECTORY)
+    if(NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/${rcpath})
+      file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${rcpath})
+    endif()
+    nuttx_generate_preprocess_target(
+      SOURCE_FILE ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX} TARGET_FILE
+      ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX} DEPENDS nuttx_context)
+    list(APPEND DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
   endforeach()
 
   foreach(rcraw ${RCRAWS})
-    get_filename_component(absrcraw ${rcraw} ABSOLUTE)
-    if(IS_DIRECTORY ${absrcraw})
-      file(
-        GLOB subdir
-        LIST_DIRECTORIES false
-        ${rcraws} ${rcraw})
-      foreach(rcraw ${rcraws})
-        list(APPEND DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${rcraw})
-        configure_file(${rcraw} ${CMAKE_CURRENT_BINARY_DIR}/${rcraw} COPYONLY)
-      endforeach()
+
+    if(IS_ABSOLUTE ${rcraw})
+      string(REGEX REPLACE "^(.*)/etc(/.*)?$" "\\1" SOURCE_ETC_PREFIX
+                           "${rcraw}")
+      string(REGEX REPLACE "^.*/(etc(/.*)?)$" "\\1" REMAINING_PATH "${rcraw}")
+      string(REGEX REPLACE "^/" "" SOURCE_ETC_SUFFIX "${REMAINING_PATH}")
     else()
-      list(APPEND DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${rcraw})
-      configure_file(${rcraw} ${CMAKE_CURRENT_BINARY_DIR}/${rcraw} COPYONLY)
+      set(SOURCE_ETC_PREFIX ${CMAKE_CURRENT_SOURCE_DIR})
+      set(SOURCE_ETC_SUFFIX ${rcraw})
+    endif()
+
+    if(IS_DIRECTORY ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX})
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX}
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX}
+        COMMAND
+          ${CMAKE_COMMAND} -E copy_directory
+          ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX}
+          ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
+      list(APPEND DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
+    else()
+      list(APPEND DEPENDS ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX})
+      configure_file(${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX}
+                     ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX} COPYONLY)
     endif()
   endforeach()
 
@@ -107,8 +155,6 @@ function(nuttx_add_romfs)
             copy_directory ${PATH} romfs_${NAME} \; fi
     COMMAND genromfs -f ${IMGNAME} -d romfs_${NAME} -V ${NAME}
     COMMAND xxd -i ${IMGNAME} romfs_${NAME}.${EXTENSION}
-    COMMAND ${CMAKE_COMMAND} -E remove ${IMGNAME}
-    COMMAND ${CMAKE_COMMAND} -E remove_directory romfs_${NAME}
     COMMAND if ! [ -z "${NONCONST}" ]\; then sed -E -i'' -e
             "s/^unsigned/const unsigned/g" romfs_${NAME}.${EXTENSION} \; fi
     DEPENDS ${DEPENDS})

@@ -32,6 +32,7 @@
 #include <syscall.h>
 
 #include <arch/irq.h>
+#include <nuttx/macro.h>
 #include <nuttx/sched.h>
 
 #include "sched/sched.h"
@@ -82,23 +83,22 @@ static void dispatch_syscall(void)
 {
   __asm__ __volatile__
   (
-    " push {r4, r5}\n"            /* Save R4 and R5 */
-    " sub sp, sp, #12\n"          /* Create a stack frame to hold 3 parms */
-    " str r4, [sp, #0]\n"         /* Move parameter 4 (if any) into position */
-    " str r5, [sp, #4]\n"         /* Move parameter 5 (if any) into position */
-    " str r6, [sp, #8]\n"         /* Move parameter 6 (if any) into position */
-    " mov r5, lr\n"               /* Save lr in R5 */
-    " ldr r4, =g_stublookup\n"    /* R4=The base of the stub lookup table */
-    " lsl r0, r0, #2\n"           /* R0=Offset of the stub for this syscall */
-    " ldr r4, [r4, r0]\n"         /* R4=Address of the stub for this syscall */
-    " blx r5\n"                   /* Call the stub (modifies lr) */
-    " mov lr, r5\n"               /* Restore lr */
-    " add sp, sp, #12\n"          /* Destroy the stack frame */
-    " pop {r4, r5}\n"             /* Recover R4 and R5 */
-    " mov r2, r0\n"               /* R2=Save return value in R2 */
-    " mov r0, %0\n"               /* R0=SYS_syscall_return */
-    " svc %1\n"::"i"(SYS_syscall_return),
-                 "i"(SYS_syscall) /* Return from the SYSCALL */
+    " push {r4, r5}\n"                              /* Save R4 and R5 */
+    " sub sp, sp, #12\n"                            /* Create a stack frame to hold 3 parms */
+    " str r4, [sp, #0]\n"                           /* Move parameter 4 (if any) into position */
+    " str r5, [sp, #4]\n"                           /* Move parameter 5 (if any) into position */
+    " str r6, [sp, #8]\n"                           /* Move parameter 6 (if any) into position */
+    " mov r5, lr\n"                                 /* Save lr in R5 */
+    " ldr r4, =g_stublookup\n"                      /* R4=The base of the stub lookup table */
+    " lsl r0, r0, #2\n"                             /* R0=Offset of the stub for this syscall */
+    " ldr r4, [r4, r0]\n"                           /* R4=Address of the stub for this syscall */
+    " blx r4\n"                                     /* Call the stub (modifies lr) */
+    " mov lr, r5\n"                                 /* Restore lr */
+    " add sp, sp, #12\n"                            /* Destroy the stack frame */
+    " pop {r4, r5}\n"                               /* Recover R4 and R5 */
+    " mov r2, r0\n"                                 /* R2=Save return value in R2 */
+    " mov r0, #" STRINGIFY(SYS_syscall_return) "\n" /* R0=SYS_syscall_return */
+    " svc #" STRINGIFY(SYS_syscall) "\n"            /* Return from the SYSCALL */
   );
 }
 #endif
@@ -117,10 +117,11 @@ static void dispatch_syscall(void)
 
 int arm_svcall(int irq, void *context, void *arg)
 {
+  struct tcb_s *tcb = this_task();
   uint32_t *regs = (uint32_t *)context;
+  uint32_t *new_regs = regs;
   uint32_t cmd;
 
-  DEBUGASSERT(regs && regs == CURRENT_REGS);
   cmd = regs[REG_R0];
 
   /* The SVCall software interrupt is called with R0 = system call command
@@ -158,16 +159,17 @@ int arm_svcall(int irq, void *context, void *arg)
        *   R0 = SYS_restore_context
        *   R1 = restoreregs
        *
-       * In this case, we simply need to set CURRENT_REGS to restore register
-       * area referenced in the saved R1. context == CURRENT_REGS is the
-       * normal exception return.  By setting CURRENT_REGS = context[R1], we
+       * In this case, we simply need to set current_regs to restore register
+       * area referenced in the saved R1. context == current_regs is the
+       * normal exception return.  By setting current_regs = context[R1], we
        * force the return to the saved context referenced in R1.
        */
 
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0);
-          CURRENT_REGS = (uint32_t *)regs[REG_R1];
+          new_regs = (uint32_t *)regs[REG_R1];
+          tcb->xcp.regs = (uint32_t *)regs[REG_R1];
         }
         break;
 
@@ -184,15 +186,14 @@ int arm_svcall(int irq, void *context, void *arg)
        *
        * In this case, we do both: We save the context registers to the save
        * register area reference by the saved contents of R1 and then set
-       * CURRENT_REGS to the save register area referenced by the saved
+       * current_regs to the save register area referenced by the saved
        * contents of R2.
        */
 
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
-          *(uint32_t **)regs[REG_R1] = regs;
-          CURRENT_REGS = (uint32_t *)regs[REG_R2];
+          new_regs = (uint32_t *)regs[REG_R2];
         }
         break;
 
@@ -446,40 +447,30 @@ int arm_svcall(int irq, void *context, void *arg)
    * switch.
    */
 
-#ifdef CONFIG_DEBUG_SYSCALL_INFO
-#  ifndef CONFIG_DEBUG_SVCALL
-  if (cmd > SYS_switch_context)
-#  else
-  if (regs != CURRENT_REGS)
-#  endif
+  if (regs != new_regs)
     {
+      restore_critical_section(tcb, this_cpu());
+
+#ifdef CONFIG_DEBUG_SYSCALL_INFO
+      regs = new_regs;
+
       svcinfo("SVCall Return:\n");
       svcinfo("  R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              CURRENT_REGS[REG_R0],  CURRENT_REGS[REG_R1],
-              CURRENT_REGS[REG_R2],  CURRENT_REGS[REG_R3],
-              CURRENT_REGS[REG_R4],  CURRENT_REGS[REG_R5],
-              CURRENT_REGS[REG_R6],  CURRENT_REGS[REG_R7]);
+              regs[REG_R0],  regs[REG_R1], regs[REG_R2],  regs[REG_R3],
+              regs[REG_R4],  regs[REG_R5], regs[REG_R6],  regs[REG_R7]);
       svcinfo("  R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              CURRENT_REGS[REG_R8],  CURRENT_REGS[REG_R9],
-              CURRENT_REGS[REG_R10], CURRENT_REGS[REG_R11],
-              CURRENT_REGS[REG_R12], CURRENT_REGS[REG_R13],
-              CURRENT_REGS[REG_R14], CURRENT_REGS[REG_R15]);
-      svcinfo(" PSR: %08x PRIMASK: %08x EXC_RETURN: %08x\n",
-              CURRENT_REGS[REG_XPSR], CURRENT_REGS[REG_PRIMASK],
-              CURRENT_REGS[REG_EXC_RETURN]);
+              regs[REG_R8],  regs[REG_R9], regs[REG_R10], regs[REG_R11],
+              regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
+      svcinfo(" PSR: %08x EXC_RETURN: %08x CONTROL: %08x\n",
+              regs[REG_XPSR], regs[REG_EXC_RETURN], regs[REG_CONTROL]);
+#endif
     }
-#  ifdef CONFIG_DEBUG_SVCALL
+#ifdef CONFIG_DEBUG_SYSCALL_INFO
   else
     {
       svcinfo("SVCall Return: %d\n", regs[REG_R0]);
     }
-#  endif
 #endif
-
-  if (regs != CURRENT_REGS)
-    {
-      restore_critical_section();
-    }
 
   return OK;
 }

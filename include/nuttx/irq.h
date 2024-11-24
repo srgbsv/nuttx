@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/nuttx/irq.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -78,9 +80,7 @@
   do \
     { \
       g_cpu_irqset = 0; \
-      SP_DMB(); \
-      g_cpu_irqlock = SP_UNLOCKED; \
-      SP_DSB(); \
+      spin_unlock_wo_note(&g_cpu_irqlock); \
     } \
   while (0)
 #endif
@@ -308,9 +308,18 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-void restore_critical_section(void);
+#  define restore_critical_section(tcb, cpu) \
+   do { \
+       if (tcb->irqcount <= 0) \
+         {\
+           if ((g_cpu_irqset & (1 << cpu)) != 0) \
+             { \
+               cpu_irqlock_clear(); \
+             } \
+         } \
+    } while (0)
 #else
-#  define restore_critical_section()
+#  define restore_critical_section(tcb, cpu)
 #endif
 
 #undef EXTERN

@@ -1,6 +1,8 @@
 /****************************************************************************
  * wireless/bluetooth/bt_conn.c
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *   Copyright (c) 2016, Intel Corporation
  *   All rights reserved.
  *
@@ -409,7 +411,7 @@ void bt_conn_send(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
 
   sq_init(&fraglist);
 
-  wlinfo("conn handle %u buf len %u\n", conn->handle, buf->len);
+  wlwarn("conn handle %u buf len %u\n", conn->handle, buf->len);
 
   if (conn->state != BT_CONN_CONNECTED)
     {
