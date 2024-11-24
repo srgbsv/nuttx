@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
+include $(TOPDIR)/tools/Make.defs
 
 ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src
 APPSDIR     = $(TOPDIR)$(DELIM)$(CONFIG_APPS_DIR)
@@ -81,7 +81,7 @@ CSRCS  = sim_initialize.c sim_idle.c sim_doirq.c sim_initialstate.c
 CSRCS += sim_createstack.c sim_usestack.c sim_releasestack.c sim_stackframe.c
 CSRCS += sim_exit.c sim_schedulesigaction.c sim_switchcontext.c sim_heap.c
 CSRCS += sim_uart.c sim_copyfullstate.c sim_sigdeliver.c sim_tcbinfo.c sim_cpuinfo.c
-CSRCS += sim_registerdump.c sim_saveusercontext.c sim_textheap.c
+CSRCS += sim_registerdump.c sim_saveusercontext.c sim_sectionheap.c
 CSRCS += sim_checkhostfstypes.c
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
@@ -140,7 +140,7 @@ ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
   STDLIBS += -lm
 endif
 
-ifeq ($(CONFIG_ARCH_COVERAGE),y)
+ifeq ($(CONFIG_COVERAGE_TOOLCHAIN),y)
   STDLIBS += -lgcov
 endif
 
@@ -154,6 +154,9 @@ endif
 
 ifeq ($(CONFIG_SMP),y)
   CSRCS += sim_smpsignal.c sim_cpuidlestack.c
+endif
+
+ifeq ($(CONFIG_ARCH_HAVE_MULTICPU),y)
   HOSTSRCS += sim_hostsmp.c
 endif
 
@@ -420,7 +423,8 @@ nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(LINKOBJS) 
 ifneq ($(CONFIG_HOST_MACOS),y)
 	$(Q) $(OBJCOPY) --redefine-syms=nuttx-names.dat nuttx.rel
 	$(Q) $(CC) $(CFLAGS) -Wl,-verbose 2>&1 | \
-	     sed -e '/====/,/====/!d;//d' -e 's/__executable_start/_stext/g' \
+	     sed -e '/====/,/====/!d;//d' \
+	         -e '/__executable_start/s/$$/PROVIDE(_stext = .);/' \
 	         -e 's/^\(\s\+\)\(\.init_array\)/\1\2 : { }\n\1.sinit/g' \
 	         -e 's/^\(\s\+\)\(\.fini_array\)/\1\2 : { }\n\1.einit/g' \
 	         -e 's/__init_array_start/_sinit/g' -e 's/__init_array_end/_einit/g' \

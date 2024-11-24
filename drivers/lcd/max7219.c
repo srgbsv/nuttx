@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/lcd/max7219.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -431,11 +433,11 @@ static int max7219_putrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
     {
       if ((*buffer & usrmask) != 0)
         {
-          __set_bit(col % 8 + i, ptr);
+          set_bit(col % 8 + i, ptr);
         }
       else
         {
-          __clear_bit(col % 8 + i, ptr);
+          clear_bit(col % 8 + i, ptr);
         }
 
 #ifdef CONFIG_LCD_PACKEDMSFIRST

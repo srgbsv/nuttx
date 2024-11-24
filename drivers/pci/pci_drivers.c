@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/pci/pci_drivers.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -25,8 +27,6 @@
 #include <debug.h>
 
 #include <nuttx/pci/pci.h>
-#include <nuttx/pci/pci_qemu_edu.h>
-#include <nuttx/pci/pci_qemu_test.h>
 #include <nuttx/rptun/rptun_ivshmem.h>
 #include <nuttx/rpmsg/rpmsg_virtio_ivshmem.h>
 #include <nuttx/virtio/virtio-pci.h>
@@ -113,6 +113,30 @@ int pci_register_drivers(void)
   if (ret < 0)
     {
       pcierr("register_virtio_pci_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_PCI_QEMU_EPC
+  ret = pci_register_qemu_epc_driver();
+  if (ret < 0)
+    {
+      pcierr("pci_register_qemu_ep_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_PCI_EPF_TEST
+  ret = pci_register_epf_test_driver();
+  if (ret < 0)
+    {
+      pcierr("pci_register_epf_test_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_PCI_EP_TEST
+  ret = pci_register_ep_test_driver();
+  if (ret < 0)
+    {
+      pcierr("pci_register_ep_test_driver failed, ret=%d\n", ret);
     }
 #endif
 

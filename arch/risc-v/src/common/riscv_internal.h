@@ -37,7 +37,6 @@
 
 #include <nuttx/irq.h>
 
-#include "riscv_sbi.h"
 #include "riscv_common_memorymap.h"
 
 /****************************************************************************
@@ -83,6 +82,7 @@
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
 
 /* Interrupt Stack macros */
+
 #define INT_STACK_SIZE  (STACK_ALIGN_DOWN(CONFIG_ARCH_INTERRUPTSTACK))
 
 /* Determine which (if any) console driver to use.  If a console is enabled
@@ -412,14 +412,14 @@ void riscv_stack_color(void *stackbase, size_t nbytes);
 
 #ifdef CONFIG_SMP
 void riscv_cpu_boot(int cpu);
-int riscv_pause_handler(int irq, void *c, void *arg);
+int riscv_smp_call_handler(int irq, void *c, void *arg);
 #endif
 
 /****************************************************************************
  * Name: riscv_mhartid
  *
  * Description:
- *   Context aware way to query hart id
+ *   Context aware way to query hart id (physical core ID)
  *
  * Returned Value:
  *   Hart id
@@ -428,26 +428,91 @@ int riscv_pause_handler(int irq, void *c, void *arg);
 
 uintptr_t riscv_mhartid(void);
 
+/****************************************************************************
+ * Name: riscv_hartid_to_cpuid
+ *
+ * Description:
+ *   Convert physical core number to logical core number. Default
+ *   implementation is 1:1 mapping, i.e. physical=logical.
+ *
+ ****************************************************************************/
+
+int riscv_hartid_to_cpuid(int hart);
+
+/****************************************************************************
+ * Name: riscv_cpuid_to_hartid
+ *
+ * Description:
+ *   Convert logical core number to physical core number. Default
+ *   implementation is 1:1 mapping, i.e. physical=logical.
+ *
+ ****************************************************************************/
+
+int riscv_cpuid_to_hartid(int cpu);
+
 /* If kernel runs in Supervisor mode, a system call trampoline is needed */
 
 #ifdef CONFIG_ARCH_USE_S_MODE
 void *riscv_perform_syscall(uintreg_t *regs);
 #endif
 
+/****************************************************************************
+ * Name: riscv_jump_to_user
+ *
+ * Description:
+ *   Routine to jump to user space, called when a user process is started and
+ *   the kernel is ready to give control to the user task in user space.
+ *
+ * Parameters:
+ *   entry - Process entry point.
+ *   a0    - Parameter 0 for the process.
+ *   a1    - Parameter 1 for the process.
+ *   a2    - Parameter 2 for the process.
+ *   sp    - User stack pointer.
+ *   regs  - Integer register save area to use.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void riscv_jump_to_user(uintptr_t entry, uintreg_t a0, uintreg_t a1,
+                        uintreg_t a2, uintreg_t sp,
+                        uintreg_t *regs) noreturn_function;
+
 /* Context switching via system calls ***************************************/
 
-/* SYS call 1:
+/****************************************************************************
+ * Name: riscv_fullcontextrestore
  *
- * void riscv_fullcontextrestore(struct tcb_s *next) noreturn_function;
- */
+ * Description:
+ *   Restores the full context of the next task.
+ *
+ * Parameters:
+ *   next - Pointer to the next task control block.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
 
 #define riscv_fullcontextrestore(next) \
   sys_call1(SYS_restore_context, (uintptr_t)next)
 
-/* SYS call 2:
+/****************************************************************************
+ * Name: riscv_switchcontext
  *
- * riscv_switchcontext(struct tcb_s *prev, struct tcb_s *next);
- */
+ * Description:
+ *   Switches the context from the previous task to the next task.
+ *
+ * Parameters:
+ *   prev - Pointer to the previous task control block.
+ *   next - Pointer to the next task control block.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
 
 #define riscv_switchcontext(prev, next) \
   sys_call2(SYS_switch_context, (uintptr_t)prev, (uintptr_t)next)

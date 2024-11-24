@@ -1,6 +1,8 @@
 /****************************************************************************
  * fs/mmap/fs_rammap.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -39,8 +41,7 @@
 
 #include "fs_rammap.h"
 #include "sched/sched.h"
-
-#ifdef CONFIG_FS_RAMMAP
+#include "fs_heap.h"
 
 /****************************************************************************
  * Public Data
@@ -80,7 +81,7 @@ static int msync_rammap(FAR struct mm_map_entry_s *entry, FAR void *start,
   fpos = file_seek(filep, entry->offset + offset, SEEK_SET);
   if (fpos < 0)
     {
-      ferr("ERRORL Seek to position %"PRIdOFF" failed\n", fpos);
+      ferr("ERROR: Seek to position %"PRIdOFF" failed\n", fpos);
       return fpos;
     }
 
@@ -111,7 +112,15 @@ static int msync_rammap(FAR struct mm_map_entry_s *entry, FAR void *start,
 
   /* Restore file pos */
 
-  file_seek(filep, opos, SEEK_SET);
+  fpos = file_seek(filep, opos, SEEK_SET);
+  if (fpos < 0)
+    {
+      /* Ensure that we finally seek back to the current file pos */
+
+      ferr("ERROR: Seek back to position %"PRIdOFF" failed\n", fpos);
+      return fpos;
+    }
+
   return nwrite >= 0 ? 0 : nwrite;
 }
 
@@ -159,7 +168,7 @@ static int unmap_rammap(FAR struct task_group_s *group,
 
       if (type == MAP_KERNEL)
         {
-          kmm_free(entry->vaddr);
+          fs_heap_free(entry->vaddr);
         }
       else if (type == MAP_USER)
         {
@@ -181,7 +190,7 @@ static int unmap_rammap(FAR struct task_group_s *group,
     {
       if (type == MAP_KERNEL)
         {
-          newaddr = kmm_realloc(entry->vaddr, length);
+          newaddr = fs_heap_realloc(entry->vaddr, length);
         }
       else if (type == MAP_USER)
         {
@@ -210,7 +219,7 @@ static int unmap_rammap(FAR struct task_group_s *group,
  *   filep   file descriptor of the backing file -- required.
  *   entry   mmap entry information.
  *           field offset and length must be initialized correctly.
- *   type    kmm_zalloc or kumm_zalloc or xip_base
+ *   type    fs_heap_zalloc or kumm_zalloc or xip_base
  *
  * Returned Value:
  *  On success, rammap returns 0 and entry->vaddr points to memory mapped.
@@ -256,7 +265,8 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
 
   /* Allocate a region of memory of the specified size */
 
-  rdbuffer = type == MAP_KERNEL ? kmm_malloc(length) : kumm_malloc(length);
+  rdbuffer = type == MAP_KERNEL ? fs_heap_malloc(length)
+                                : kumm_malloc(length);
   if (!rdbuffer)
     {
       ferr("ERROR: Region allocation failed, length: %zu\n", length);
@@ -338,7 +348,7 @@ out:
 errout_with_region:
   if (type == MAP_KERNEL)
     {
-      kmm_free(entry->vaddr);
+      fs_heap_free(entry->vaddr);
     }
   else if (type == MAP_USER)
     {
@@ -347,5 +357,3 @@ errout_with_region:
 
   return ret;
 }
-
-#endif /* CONFIG_FS_RAMMAP */

@@ -32,6 +32,7 @@
 #include <syscall.h>
 
 #include <arch/irq.h>
+#include <nuttx/macro.h>
 #include <nuttx/sched.h>
 #include <nuttx/userspace.h>
 
@@ -87,26 +88,25 @@ static void dispatch_syscall(void)
        *              = orig_SP - 20 - ((orig_SP - 20) & ~7)
        */
 
-      " mov ip, sp\n"                /* Calculate (orig_SP - new_SP) */
+      " mov ip, sp\n"                                 /* Calculate (orig_SP - new_SP) */
       " sub ip, ip, #20\n"
       " and ip, ip, #7\n"
       " add ip, ip, #20\n"
       " sub sp, sp, ip\n"
-      " str r4, [sp, #0]\n"          /* Move parameter 4 (if any) into position */
-      " str r5, [sp, #4]\n"          /* Move parameter 5 (if any) into position */
-      " str r6, [sp, #8]\n"          /* Move parameter 6 (if any) into position */
-      " str lr, [sp, #12]\n"         /* Save lr in the stack frame */
-      " str ip, [sp, #16]\n"         /* Save (orig_SP - new_SP) value */
-      " ldr ip, =g_stublookup\n"     /* R12=The base of the stub lookup table */
-      " ldr ip, [ip, r0, lsl #2]\n"  /* R12=The address of the stub for this syscall */
-      " blx ip\n"                    /* Call the stub (modifies lr) */
-      " ldr lr, [sp, #12]\n"         /* Restore lr */
-      " ldr r2, [sp, #16]\n"         /* Restore (orig_SP - new_SP) value */
-      " add sp, sp, r2\n"            /* Restore SP */
-      " mov r2, r0\n"                /* R2=Save return value in R2 */
-      " mov r0, %0\n"                /* R0=SYS_syscall_return */
-      " svc %1\n"::"i"(SYS_syscall_return),
-                   "i"(SYS_syscall)  /* Return from the SYSCALL */
+      " str r4, [sp, #0]\n"                           /* Move parameter 4 (if any) into position */
+      " str r5, [sp, #4]\n"                           /* Move parameter 5 (if any) into position */
+      " str r6, [sp, #8]\n"                           /* Move parameter 6 (if any) into position */
+      " str lr, [sp, #12]\n"                          /* Save lr in the stack frame */
+      " str ip, [sp, #16]\n"                          /* Save (orig_SP - new_SP) value */
+      " ldr ip, =g_stublookup\n"                      /* R12=The base of the stub lookup table */
+      " ldr ip, [ip, r0, lsl #2]\n"                   /* R12=The address of the stub for this syscall */
+      " blx ip\n"                                     /* Call the stub (modifies lr) */
+      " ldr lr, [sp, #12]\n"                          /* Restore lr */
+      " ldr r2, [sp, #16]\n"                          /* Restore (orig_SP - new_SP) value */
+      " add sp, sp, r2\n"                             /* Restore SP */
+      " mov r2, r0\n"                                 /* R2=Save return value in R2 */
+      " mov r0, #" STRINGIFY(SYS_syscall_return) "\n" /* R0=SYS_syscall_return */
+      " svc #" STRINGIFY(SYS_syscall) "\n"            /* Return from the SYSCALL */
     );
 }
 #endif
@@ -125,10 +125,11 @@ static void dispatch_syscall(void)
 
 int arm_svcall(int irq, void *context, void *arg)
 {
+  struct tcb_s *tcb = this_task();
   uint32_t *regs = (uint32_t *)context;
+  uint32_t *new_regs = regs;
   uint32_t cmd;
 
-  DEBUGASSERT(regs && regs == up_current_regs());
   cmd = regs[REG_R0];
 
   /* The SVCall software interrupt is called with R0 = system call command
@@ -176,7 +177,8 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0);
-          up_set_current_regs((uint32_t *)regs[REG_R1]);
+          new_regs = (uint32_t *)regs[REG_R1];
+          tcb->xcp.regs = (uint32_t *)regs[REG_R1];
         }
         break;
 
@@ -200,8 +202,7 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
-          *(uint32_t **)regs[REG_R1] = regs;
-          up_set_current_regs((uint32_t *)regs[REG_R2]);
+          new_regs = (uint32_t *)regs[REG_R2];
         }
         break;
 
@@ -298,8 +299,9 @@ int arm_svcall(int irq, void *context, void *arg)
        * At this point, the following values are saved in context:
        *
        *   R0 = SYS_pthread_start
-       *   R1 = entrypt
-       *   R2 = arg
+       *   R1 = startup (trampoline)
+       *   R2 = entrypt
+       *   R3 = arg
        */
 
 #if !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_PTHREAD)
@@ -455,41 +457,30 @@ int arm_svcall(int irq, void *context, void *arg)
    * switch.
    */
 
-#ifdef CONFIG_DEBUG_SYSCALL_INFO
-#  ifndef CONFIG_DEBUG_SVCALL
-  if (cmd > SYS_switch_context)
-#  else
-  if (regs != up_current_regs())
-#  endif
+  if (regs != new_regs)
     {
+      restore_critical_section(tcb, this_cpu());
+
+#ifdef CONFIG_DEBUG_SYSCALL_INFO
+      regs = new_regs;
+
       svcinfo("SVCall Return:\n");
       svcinfo("  R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              up_current_regs()[REG_R0],  up_current_regs()[REG_R1],
-              up_current_regs()[REG_R2],  up_current_regs()[REG_R3],
-              up_current_regs()[REG_R4],  up_current_regs()[REG_R5],
-              up_current_regs()[REG_R6],  up_current_regs()[REG_R7]);
+              regs[REG_R0],  regs[REG_R1], regs[REG_R2],  regs[REG_R3],
+              regs[REG_R4],  regs[REG_R5], regs[REG_R6],  regs[REG_R7]);
       svcinfo("  R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              up_current_regs()[REG_R8],  up_current_regs()[REG_R9],
-              up_current_regs()[REG_R10], up_current_regs()[REG_R11],
-              up_current_regs()[REG_R12], up_current_regs()[REG_R13],
-              up_current_regs()[REG_R14], up_current_regs()[REG_R15]);
-      svcinfo(" PSR: %08x EXC_RETURN: %08x, CONTROL: %08x\n",
-              up_current_regs()[REG_XPSR],
-              up_current_regs()[REG_EXC_RETURN],
-              up_current_regs()[REG_CONTROL]);
+              regs[REG_R8],  regs[REG_R9], regs[REG_R10], regs[REG_R11],
+              regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
+      svcinfo(" PSR: %08x EXC_RETURN: %08x CONTROL: %08x\n",
+              regs[REG_XPSR], regs[REG_EXC_RETURN], regs[REG_CONTROL]);
+#endif
     }
-#  ifdef CONFIG_DEBUG_SVCALL
+#ifdef CONFIG_DEBUG_SYSCALL_INFO
   else
     {
       svcinfo("SVCall Return: %d\n", regs[REG_R0]);
     }
-#  endif
 #endif
-
-  if (regs != up_current_regs())
-    {
-      restore_critical_section(this_task(), this_cpu());
-    }
 
   return OK;
 }

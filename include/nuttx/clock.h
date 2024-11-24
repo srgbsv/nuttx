@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/nuttx/clock.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -389,7 +391,7 @@ EXTERN volatile clock_t g_system_ticks;
  *
  * Input Parameters:
  *   ts1 and ts2: The two timespecs to be added
- *   t23: The location to return the result (may be ts1 or ts2)
+ *   ts3: The location to return the result (may be ts1 or ts2)
  *
  * Returned Value:
  *   None
@@ -420,7 +422,7 @@ EXTERN volatile clock_t g_system_ticks;
  *
  * Input Parameters:
  *   ts1 and ts2: The two timespecs to be subtracted (ts1 - ts2)
- *   t23: The location to return the result (may be ts1 or ts2)
+ *   ts3: The location to return the result (may be ts1 or ts2)
  *
  * Returned Value:
  *   None
