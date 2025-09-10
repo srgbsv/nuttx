@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32h7/stm32_rptun.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -47,7 +49,7 @@
 #    error CONFIG_OPENAMP_CACHE must be set
 #  endif
 #  if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARM_MPU)
-#    erro CONFIG_ARM_MPU must be enabled
+#    error CONFIG_ARM_MPU must be enabled
 #  endif
 #endif
 

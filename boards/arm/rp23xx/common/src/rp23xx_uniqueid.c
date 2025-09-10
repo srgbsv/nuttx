@@ -129,12 +129,12 @@ void rp23xx_uniqueid_initialize(void)
  *     length.
  *
  * Returned Value:
- *   Zero (OK) is returned on success.  Otherwize a negated errno value is
+ *   Zero (OK) is returned on success.  Otherwise a negated errno value is
  *   returned indicating the nature of the failure.
  *
  ****************************************************************************/
 
-int board_uniqueid(FAR uint8_t *uniqueid)
+int board_uniqueid(uint8_t *uniqueid)
 {
   memcpy(uniqueid, g_uniqueid, CONFIG_BOARDCTL_UNIQUEID_SIZE);
   return OK;

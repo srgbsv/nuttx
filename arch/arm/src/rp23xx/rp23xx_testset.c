@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_testset.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,7 +36,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RP23XX_TESTSET_SPINLOCK     0   /* Spinlock used for test and set */
+/* Errata RP2350-E2 SIO SPINLOCK writes are mirrored at +0x80 offset
+ * Use only safe SPINLOCKS
+ * The following SIO spinlocks can be used normally as they do not alias
+ * with writable registers: 5, 6, 7, 10,11, and 18 through 31.
+ */
+
+#define RP23XX_TESTSET_SPINLOCK     7   /* Spinlock used for test and set */
 
 /****************************************************************************
  * Public Functions
@@ -73,7 +81,7 @@ spinlock_t up_testset(volatile spinlock_t *lock)
   if (ret == SP_UNLOCKED)
     {
       *lock = SP_LOCKED;
-      SP_DMB();
+      UP_DMB();
     }
 
   /* Unlock hardware spinlock */

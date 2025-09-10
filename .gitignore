@@ -25,6 +25,8 @@
 *.rel
 *.src
 *.srec
+*.swn
+*.swo
 *.swp
 *.sym
 *.wsp
@@ -35,6 +37,8 @@
 *.mapfile
 *.SystemMap
 *~
+\#*\#
+.\#*
 .depend
 /.cache
 /.config
@@ -42,6 +46,8 @@
 /.config-*
 /.config\ *
 /.cproject
+/.cache
+/.clang-format
 /.gdbinit
 /.gdb_history
 /.project
@@ -56,7 +62,7 @@
 /nuttx.*
 /nuttx_user*
 /staging
-/tags
+**/tags
 /TAGS
 core
 Make*.dep
@@ -69,6 +75,7 @@ uImage
 .dirlinks
 .fakelnk
 .vscode
+.idea
 .DS_Store
 tools/gdb/__pycache__
 /build
@@ -80,4 +87,4 @@ SAVEMake.defs
 SAVEconfig
 .aider*
 imx9-norimage.img
-
+config.txt

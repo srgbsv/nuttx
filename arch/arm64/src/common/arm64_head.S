@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_head.S
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -15,11 +17,6 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
  * License for the specific language governing permissions and limitations
  * under the License.
- *
- *    DESCRIPTION
- *        Bring-up code for ARMv8.
- *        Based on head.S(arm64 porting) at Xen Hypervisor Project
- *        Based on reset.S(aarch64 porting) at Zephyr RTOS Project
  *
  ****************************************************************************/
 
@@ -127,8 +124,8 @@ real_start:
     /* The global variable cpu_boot_params is not safety to
      * access in some case. eg. Some debugger will reboot
      * the NuttX but not reload the whole image, so it will
-     * be not predicable for the initial value of the global
-     * value in that case
+     * be not predictable for the initial value of the global
+     * value in that case.
      *
      * get_cpu_id is safety because the CPU identification is
      * not change in any case, so the code will judge in a
@@ -368,15 +365,16 @@ out:
  */
 
 boot_stage_puts:
-    stp   xzr, x30, [sp, #-16]!
+    stp   x19, x30, [sp, #-16]!
+    mov   x19, x1
 1:
-    ldrb  w0, [x1], #1       /* Load next char */
+    ldrb  w0, [x19], #1      /* Load next char */
     cmp   w0, 0
     beq   2f                 /* Exit on nul */
     bl    arm64_lowputc
     b     1b                 /* Loop */
 2:
-    ldp   xzr, x30, [sp], #16
+    ldp   x19, x30, [sp], #16
     ret
 
 .type boot_stage_puts, %function;
@@ -394,7 +392,7 @@ arm64_data_initialize:
     /* Zero BSS */
 
     adrp    x0, .Linitparms
-    add     x0, x0, .Linitparms
+    add     x0, x0, #:lo12:.Linitparms
     ldp     x1, x2, [x0], #8
 
     mov     x0, #0

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/hardware/rp23xx_psm.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -72,5 +74,7 @@
 #define RP23XX_PSM_ROSC                  (1 << 2)
 #define RP23XX_PSM_OTP                   (1 << 1)
 #define RP23XX_PSM_PROC_COLD             (1 << 0)
+
+#define RP23XX_PSM_WDSEL_BITS            0x01ffffff
 
 #endif /* __ARCH_ARM_SRC_RP23XX_HARDWARE_RP23XX_PSM_H */

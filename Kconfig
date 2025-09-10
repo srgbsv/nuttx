@@ -801,7 +801,7 @@ endif # DEBUG_AUDIO
 config DEBUG_BINFMT
 	bool "Binary Loader Debug Features"
 	default n
-	depends on !BINFMT_DISABLE || LIBC_MODLIB
+	depends on !BINFMT_DISABLE || LIBC_ELF
 	---help---
 		Enable binary loader debug features.
 
@@ -2432,6 +2432,14 @@ endif # DEBUG_CORESIGHT
 
 endif # DEBUG_FEATURES
 
+config ARCH_PROTECT_ZERO_ADDRESS
+	bool "Protect address zero"
+	depends on ARCH_HAVE_DEBUG
+	default n
+	---help---
+		When the program accesses address 0, it will assert automatically.
+		Hardware support is required, such as ARM V8M DWT watchpoint
+
 config ARCH_HAVE_STACKCHECK
 	bool
 	default n
@@ -2495,6 +2503,7 @@ config DEBUG_SYMBOLS
 
 config DEBUG_SYMBOLS_LEVEL
 	string "Custom symbols level"
+	depends on DEBUG_SYMBOLS
 	default "-g"
 	---help---
 		This string represents the custom symbol level that will be

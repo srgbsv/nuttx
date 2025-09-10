@@ -127,6 +127,17 @@
 #  define IFF_IS_IPv4(f)   (1)
 #endif
 
+/* MDIO Manageable Device (MMD) support with SIOCxMIIREG ioctl commands */
+
+#define MDIO_PHY_ID_C45      0x8000
+#define MDIO_PHY_ID_PRTAD    0x03E0
+#define MDIO_PHY_ID_DEVAD    0x001F
+#define MDIO_PHY_ID_C45_MASK \
+    (MDIO_PHY_ID_C45 | MDIO_PHY_ID_PRTAD | MDIO_PHY_ID_DEVAD)
+
+#define mdio_phy_id_c45(prtad, devad) \
+    ((uint16_t)(MDIO_PHY_ID_C45 | ((prtad) << 5) | (devad)))
+
 /* RFC 2863 operational status */
 
 enum
@@ -178,9 +189,9 @@ struct mii_ioctl_data_s
 
 struct can_ioctl_data_s
 {
-  uint16_t arbi_bitrate; /* Classic CAN / Arbitration phase bitrate kbit/s */
+  uint32_t arbi_bitrate; /* Classic CAN / Arbitration phase bitrate bit/s */
   uint16_t arbi_samplep; /* Classic CAN / Arbitration phase input % */
-  uint16_t data_bitrate; /* Data phase bitrate kbit/s */
+  uint32_t data_bitrate; /* Data phase bitrate bit/s */
   uint16_t data_samplep; /* Data phase sample point % */
 };
 

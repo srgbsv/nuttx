@@ -1,6 +1,7 @@
 /****************************************************************************
  * arch/sim/src/sim/sim_wifidriver.c
- * Manage the host wireless
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -854,7 +855,7 @@ get_scan:
       p = realloc(rbuf, size);
       if (p == NULL)
         {
-          nerr("get scan faied in realloc!\n");
+          nerr("get scan failed in realloc!\n");
           free(rbuf);
           return -ENOMEM;
         }
@@ -1481,7 +1482,7 @@ static int wifidriver_start_connect(struct sim_netdev_s *wifidev)
     {
     case IW_MODE_INFRA:
 
-      /* If wlan is connected, should be disconnect before connectting. */
+      /* If wlan is connected, should be disconnect before connecting. */
 
       set_cmd(wifidev, "select_network %d", wifidev->network_id);
       set_cmd(wifidev, "disconnect");
@@ -1494,7 +1495,7 @@ static int wifidriver_start_connect(struct sim_netdev_s *wifidev)
           wifidev->psk_flag = 0;
         }
 
-      /* Wait the connect sucess. */
+      /* Wait the connect success. */
 
       while (timeout--)
         {

@@ -122,7 +122,7 @@ static int usbhost_waiter(int argc, char *argv[])
  * Name: at32_usbinitialize
  *
  * Description:
- *   Called from at32_usbinitialize very early in inialization to setup
+ *   Called from at32_usbinitialize very early in initialization to setup
  *   USB-related GPIO pins for the AT32F407_MINIvery board.
  *
  ****************************************************************************/
@@ -320,7 +320,7 @@ void at32_usbhost_vbusdrive(int iface, bool enable)
 #ifdef CONFIG_USBHOST
 int at32_setup_overcurrent(xcpt_t handler, void *arg)
 {
-#ifdef CONFIG_AT32_OTGFS_VBUS_CONTROL  
+#ifdef CONFIG_AT32_OTGFS_VBUS_CONTROL
   return at32_gpiosetevent(GPIO_OTGFS_OVER, true, true, true, handler, arg);
 #endif
 

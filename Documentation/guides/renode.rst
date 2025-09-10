@@ -2,24 +2,13 @@
 Run NuttX on Renode
 ===================
 
-Renode (https://renode.io/) is and open source virutal development
+Renode (https://renode.io/) is and open source virtual development
 framework dedicated for complex embedded systems.
 
 This page contains notes on running some of NuttX boards on Renode.
 
-ARM-v7m
-=======
-
-Renode doesn't correctly handle ``SVC`` instruction escalation to HardFault
-when ``PRIMASK=1`` which crashs NuttX in the first ``up_exit()`` call.
-We can work around this problem by enabling BASEPRI::
-
-  CONFIG_ARMV7M_USEBASEPRI=y
-
 stm32f4discovery
 ================
-
-``CONFIG_ARMV7M_USEBASEPRI=y`` must be set.
 
 Renode doesn't support CCM memory, so we have to disable it
 with ``CONFIG_MM_REGIONS=1``.
@@ -54,8 +43,6 @@ Doesn't work. No BASEPRI implementation for ``Cotex-M0`` in NuttX.
 
 nrf52840-dk
 ===========
-
-``CONFIG_ARMV7M_USEBASEPRI=y`` must be set.
 
 At default Renode uses UART with EasyDMA enabled (UARTE) which is not supported
 by Nuttx yet. We can get around this by creating our own machine description
@@ -101,7 +88,7 @@ Known issues:
 stm32f746g-disco
 ================
 
-``CONFIG_ARMV7M_USEBASEPRI=y`` and ``CONFIG_ARMV7M_BASEPRI_WAR=y`` must be set.
+``CONFIG_ARMV7M_BASEPRI_WAR=y`` must be set.
 
 Renode script::
 
@@ -131,8 +118,6 @@ Known issues:
 nucleo-h743zi
 =============
 
-``CONFIG_ARMV7M_USEBASEPRI=y`` must be set.
-
 Renode doesn't support ``PWR_CSR1_ACTVOSRDY`` bit so we have to disable
 it with ``CONFIG_STM32H7_PWR_IGNORE_ACTVOSRDY=y``.
 
@@ -153,4 +138,4 @@ Renode script::
 
   runMacro $reset
 
-Tested wtih ``nucleo-h743zi/nsh``.
+Tested with ``nucleo-h743zi/nsh``.

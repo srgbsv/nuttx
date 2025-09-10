@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_schedulesigaction.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -70,7 +72,8 @@ static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
   tcb->xcp.regs[REG_SP_EL0] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2;
 #endif
   tcb->xcp.regs[REG_SP_ELX] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE;
-  tcb->xcp.regs[REG_EXE_DEPTH]  = 1;
+  tcb->xcp.regs[REG_EXE_DEPTH] = 1;
+  tcb->xcp.regs[REG_SCTLR_EL1] = regs[REG_SCTLR_EL1];
 }
 
 /****************************************************************************
@@ -138,7 +141,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        * have been delivered.
        */
 
-      tcb->xcp.saved_reg = tcb->xcp.regs;
+      tcb->xcp.saved_regs = tcb->xcp.regs;
 
       /* create signal process context */
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_irq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -180,6 +182,27 @@ static int rp23xx_reserved(int irq, void *context, void *arg)
 #endif
 
 /****************************************************************************
+ * Name: rp23xx_prioritize_syscall
+ *
+ * Description:
+ *   Set the priority of an exception.  This function may be needed
+ *   internally even if support for prioritized interrupts is not enabled.
+ *
+ ****************************************************************************/
+
+static inline void rp23xx_prioritize_syscall(int priority)
+{
+  uint32_t regval;
+
+  /* SVCALL is system handler 11 */
+
+  regval  = getreg32(NVIC_SYSH8_11_PRIORITY);
+  regval &= ~NVIC_SYSH_PRIORITY_PR11_MASK;
+  regval |= (priority << NVIC_SYSH_PRIORITY_PR11_SHIFT);
+  putreg32(regval, NVIC_SYSH8_11_PRIORITY);
+}
+
+/****************************************************************************
  * Name: rp23xx_clrpend
  *
  * Description:
@@ -274,6 +297,8 @@ void up_irqinitialize(void)
   irq_attach(RP23XX_IRQ_SVCALL, arm_svcall, NULL);
   irq_attach(RP23XX_IRQ_HARDFAULT, arm_hardfault, NULL);
 
+  rp23xx_prioritize_syscall(NVIC_SYSH_SVCALL_PRIORITY);
+
   /* Attach all other processor exceptions (except reset and sys tick) */
 
 #ifdef CONFIG_DEBUG_FEATURES
@@ -305,7 +330,7 @@ void up_disable_irq(int irq)
 
 #ifdef CONFIG_SMP
   if (irq >= RP23XX_IRQ_EXTINT && irq != RP23XX_SIO_IRQ_FIFO &&
-      up_cpu_index() != 0)
+      this_cpu() != 0)
     {
       /* Must be handled by Core 0 */
 
@@ -361,7 +386,7 @@ void up_enable_irq(int irq)
 
 #ifdef CONFIG_SMP
   if (irq >= RP23XX_IRQ_EXTINT && irq != RP23XX_SIO_IRQ_FIFO &&
-      up_cpu_index() != 0)
+      this_cpu() != 0)
     {
       /* Must be handled by Core 0 */
 
@@ -441,11 +466,11 @@ int up_prioritize_irq(int irq, int priority)
 
   if (irq >= RP23XX_IRQ_EXTINT && irq < RP23XX_IRQ_EXTINT + 32)
     {
-      /* ARMV6M_NVIC_IPR() maps register IPR0-IPR7 with four settings per
+      /* NVIC_IRQ_PRIORITY maps register IPR0-IPR7 with four settings per
        * register.
        */
 
-      regaddr = ARMV6M_NVIC_IPR(irq >> 2);
+      regaddr = NVIC_IRQ_PRIORITY(irq);
       shift   = (irq & 3) << 3;
     }
 
@@ -456,13 +481,13 @@ int up_prioritize_irq(int irq, int priority)
 
   else if (irq == RP23XX_IRQ_PENDSV)
     {
-      regaddr = ARMV6M_SYSCON_SHPR2;
-      shift   = SYSCON_SHPR3_PRI_14_SHIFT;
+      regaddr = NVIC_SYSH12_15_PRIORITY;
+      shift   = NVIC_SYSH_PRIORITY_PR14_SHIFT;
     }
   else if (irq == RP23XX_IRQ_SYSTICK)
     {
-      regaddr = ARMV6M_SYSCON_SHPR2;
-      shift   = SYSCON_SHPR3_PRI_15_SHIFT;
+      regaddr = NVIC_SYSH12_15_PRIORITY;
+      shift   = NVIC_SYSH_PRIORITY_PR15_SHIFT;
     }
   else
     {

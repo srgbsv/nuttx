@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/esp32c3-legacy/esp32c3_perf.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this args for additional information regarding copyright ownership.  The
@@ -33,7 +35,7 @@
 #include "hardware/esp32c3_system.h"
 #include "esp32c3_clockconfig.h"
 
-#ifdef CONFIG_ARCH_PERF_EVENTS
+#ifdef CONFIG_ARCH_HAVE_PERF_EVENTS
 
 /****************************************************************************
  * Pre-processor Definitions

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_serial.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -770,11 +772,11 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
 #endif
           priv->baud = cfgetispeed(termiosp);
 
+          spin_unlock_irqrestore(&priv->lock, flags);
+
           /* Configure the UART line format and speed. */
 
           up_set_format(dev);
-
-          spin_unlock_irqrestore(&priv->lock, flags);
         }
         break;
 #endif
@@ -965,7 +967,7 @@ static bool up_txempty(struct uart_dev_s *dev)
  *
  * Description:
  *   Performs the low level UART initialization early in debug so that the
- *   serial console will be available during bootup.  This must be called
+ *   serial console will be available during boot up.  This must be called
  *   before arm_serialinit.
  *
  *   NOTE: Configuration of the CONSOLE UART was performed by up_lowsetup()

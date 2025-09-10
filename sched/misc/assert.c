@@ -34,7 +34,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
 #include <nuttx/init.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/tls.h>
 #include <nuttx/signal.h>
 #include <nuttx/sched.h>
@@ -285,7 +284,8 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
   else
     {
       force = true;
-      _alert("ERROR: Stack pointer is not within the stack\n");
+      _alert("ERROR: Stack pointer %" PRIxPTR "is not within the stack\n",
+             sp);
     }
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
@@ -308,6 +308,9 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
                     up_getusrsp((FAR void *)running_regs()) : 0;
       if (tcbstack_sp < tcbstack_base || tcbstack_sp >= tcbstack_top)
         {
+          _alert("ERROR: Stack pointer %" PRIxPTR " is not within the"
+                 " stack\n", tcbstack_sp);
+
           tcbstack_sp = 0;
           force = true;
         }
@@ -457,10 +460,10 @@ static void dump_backtrace(FAR struct tcb_s *tcb, FAR void *arg)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_DUMP_ON_EXIT
-static void dump_filelist(FAR struct tcb_s *tcb, FAR void *arg)
+static void dump_fdlist(FAR struct tcb_s *tcb, FAR void *arg)
 {
-  FAR struct filelist *filelist = &tcb->group->tg_filelist;
-  files_dumplist(filelist);
+  FAR struct fdlist *list = &tcb->group->tg_fdlist;
+  fdlist_dump(list);
 }
 #endif
 
@@ -549,7 +552,7 @@ static void dump_tasks(void)
 #endif
 
 #ifdef CONFIG_SCHED_DUMP_ON_EXIT
-  nxsched_foreach(dump_filelist, NULL);
+  nxsched_foreach(dump_fdlist, NULL);
 #endif
 }
 
@@ -765,16 +768,13 @@ static void dump_fatal_info(FAR struct tcb_s *rtcb,
   usbtrace_enumerate(assert_tracecallback, NULL);
 #endif
 
-#ifdef CONFIG_BOARD_CRASHDUMP
-  board_crashdump(up_getsp(), rtcb, filename, linenum, msg, regs);
-#endif
-
-#if defined(CONFIG_BOARD_COREDUMP_SYSLOG) || \
-    defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-
   /* Flush previous SYSLOG data before possible long time coredump */
 
   syslog_flush();
+
+#ifdef CONFIG_BOARD_CRASHDUMP_CUSTOM
+  board_crashdump(up_getsp(), rtcb, filename, linenum, msg, regs);
+#elif !defined(CONFIG_BOARD_CRASHDUMP_NONE)
 
   /* Dump core information */
 
@@ -844,6 +844,7 @@ void _assert(FAR const char *filename, int linenum,
   if (os_ready)
     {
       flags = spin_lock_irqsave(&g_assert_lock);
+      sched_lock();
     }
 
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
@@ -917,5 +918,6 @@ void _assert(FAR const char *filename, int linenum,
   if (os_ready)
     {
       spin_unlock_irqrestore(&g_assert_lock, flags);
+      sched_unlock();
     }
 }

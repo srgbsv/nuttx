@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/cxd32xx/cxd32_serial.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -326,7 +328,7 @@ static void up_set_format(struct uart_dev_s *dev)
 
   up_serialout(priv, CXD32_UART_LCR_H, lcr);
 
-  /* CXD32 does not have CTS/RTS pin, so these are disbled */
+  /* CXD32 does not have CTS/RTS pin, so these are disabled */
 
   cr &= ~(UART_CR_RTSEN | UART_CR_CTSEN);
   up_serialout(priv, CXD32_UART_CR, cr | cr_en);
@@ -923,7 +925,7 @@ static bool up_txempty(struct uart_dev_s *dev)
  *
  * Description:
  *   Performs the low level UART initialization early in debug so that the
- *   serial console will be available during bootup.  This must be called
+ *   serial console will be available during boot up.  This must be called
  *   before arm_serialinit.
  *
  *   NOTE: Configuration of the CONSOLE UART was performed by up_lowsetup()

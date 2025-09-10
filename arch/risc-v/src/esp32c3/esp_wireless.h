@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/esp32c3/esp_wireless.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -50,7 +52,6 @@
  * headers
  */
 
-#define CONFIG_MAC_BB_PD                              (0)
 #define MAC_LEN                                       (6)
 
 /****************************************************************************

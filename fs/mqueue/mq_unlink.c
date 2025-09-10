@@ -36,7 +36,7 @@
 
 #include "inode/inode.h"
 #include "mqueue/mqueue.h"
-#include "notify/notify.h"
+#include "vfs/vfs.h"
 
 /****************************************************************************
  * Private Functions
@@ -58,7 +58,7 @@
 
 static void mq_inode_release(FAR struct inode *inode)
 {
-  if (atomic_load(&inode->i_crefs) <= 1)
+  if (atomic_read(&inode->i_crefs) <= 1)
     {
       FAR struct mqueue_inode_s *msgq = inode->i_private;
 

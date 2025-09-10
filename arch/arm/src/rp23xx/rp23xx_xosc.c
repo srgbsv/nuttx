@@ -1,10 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_xosc.c
  *
- * Based upon the software originally developed by
- *   Raspberry Pi (Trading) Ltd.
- *
- * Copyright 2020 (c) 2020 Raspberry Pi (Trading) Ltd.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2020 Raspberry Pi (Trading) Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +54,13 @@
 #include "hardware/rp23xx_xosc.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define XOSC_STARTUPDELAY_MULT 6
+#define XOSC_STARTUPDELAY (BOARD_XOSC_STARTUPDELAY * XOSC_STARTUPDELAY_MULT)
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -80,7 +85,9 @@ void rp23xx_xosc_init(void)
 
   /* Set xosc startup delay */
 
-  uint32_t startup_delay = (((12 * MHZ) / 1000) + 128) / 256;
+  uint32_t startup_delay = (((BOARD_XOSC_FREQ / 1000) + 128) / 256) *
+                              XOSC_STARTUPDELAY;
+  ASSERT(startup_delay < 1 << 13);
   putreg32(startup_delay, RP23XX_XOSC_STARTUP);
 
   /* Set the enable bit now that we have set freq range and startup delay */

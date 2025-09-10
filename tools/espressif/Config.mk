@@ -24,6 +24,18 @@
 
 CHIP_SERIES = $(patsubst "%",%,$(CONFIG_ESPRESSIF_CHIP_SERIES))
 
+# MCUBoot requires a region in flash for the E-Fuse virtual mode.
+# To avoid erasing this region, flash a dummy empty file to the
+# virtual E-Fuse offset.
+
+VIRTUAL_EFUSE_BIN := vefuse.bin
+
+ifeq ($(CONFIG_ESPRESSIF_EFUSE_VIRTUAL_KEEP_IN_FLASH),y)
+	EFUSE_FLASH_OFFSET := $(CONFIG_ESPRESSIF_EFUSE_VIRTUAL_KEEP_IN_FLASH_OFFSET)
+else
+	EFUSE_FLASH_OFFSET := 0x10000
+endif
+
 # These are the macros that will be used in the NuttX make system to compile
 # and assemble source files and to insert the resulting object files into an
 # archive.  These replace the default definitions at tools/Config.mk
@@ -48,17 +60,7 @@ else ifeq ($(CONFIG_ESPRESSIF_FLASH_MODE_QOUT),y)
 	FLASH_MODE := qout
 endif
 
-ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_80M),y)
-	FLASH_FREQ := 80m
-else ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_48M),y)
-	FLASH_FREQ := 48m
-else ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_40M),y)
-	FLASH_FREQ := 40m
-else ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_26M),y)
-	FLASH_FREQ := 26m
-else ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_20M),y)
-	FLASH_FREQ := 20m
-endif
+FLASH_FREQ := $(CONFIG_ESPRESSIF_FLASH_FREQ)
 
 ifeq ($(CONFIG_ESPRESSIF_FLASH_DETECT),y)
 	ESPTOOL_WRITEFLASH_OPTS := -fs detect -fm dio -ff $(FLASH_FREQ)
@@ -79,7 +81,16 @@ ifdef ESPTOOL_BINDIR
 	endif
 endif
 
+define MAKE_VIRTUAL_EFUSE_BIN
+	$(Q)if [ ! -f "$(VIRTUAL_EFUSE_BIN)" ]; then \
+		dd if=/dev/zero of=$(VIRTUAL_EFUSE_BIN) count=0 status=none; \
+	fi
+endef
+
 ifeq ($(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT),y)
+
+	ESPTOOL_BINS += $(EFUSE_FLASH_OFFSET) $(VIRTUAL_EFUSE_BIN)
+
 	ifeq ($(CONFIG_ESPRESSIF_ESPTOOL_TARGET_PRIMARY),y)
 		VERIFIED   := --confirm
 		APP_OFFSET := $(CONFIG_ESPRESSIF_OTA_PRIMARY_SLOT_OFFSET)
@@ -116,7 +127,7 @@ define MERGEBIN
 		echo "Missing Flash memory size configuration."; \
 		exit 1; \
 	fi
-	esptool.py -c $(CHIP_SERIES) merge_bin --output nuttx.merged.bin $(ESPTOOL_BINS)
+	esptool.py -c $(CHIP_SERIES) merge_bin --fill-flash-size $(FLASH_SIZE) --output nuttx.merged.bin $(ESPTOOL_BINS)
 	$(Q) echo nuttx.merged.bin >> nuttx.manifest
 	$(Q) echo "Generated: nuttx.merged.bin"
 endef
@@ -156,6 +167,7 @@ endif
 
 define POSTBUILD
 	$(call MKIMAGE)
+	$(if $(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT),$(call MAKE_VIRTUAL_EFUSE_BIN))
 	$(if $(CONFIG_ESPRESSIF_MERGE_BINS),$(call MERGEBIN))
 endef
 
@@ -173,6 +185,6 @@ define FLASH
 	fi
 
 	$(eval ESPTOOL_OPTS := -c $(CHIP_SERIES) -p $(ESPTOOL_PORT) -b $(ESPTOOL_BAUD) $(if $(CONFIG_ESPRESSIF_ESPTOOLPY_NO_STUB),--no-stub))
-	$(eval WRITEFLASH_OPTS := $(if $(CONFIG_ESPRESSIF_MERGE_BINS),0x0 nuttx.merged.bin,$(ESPTOOL_WRITEFLASH_OPTS) $(ESPTOOL_BINS)))
+	$(eval WRITEFLASH_OPTS := $(if $(CONFIG_ESPRESSIF_MERGE_BINS),$(ESPTOOL_WRITEFLASH_OPTS) 0x0 nuttx.merged.bin,$(ESPTOOL_WRITEFLASH_OPTS) $(ESPTOOL_BINS)))
 	esptool.py $(ESPTOOL_OPTS) write_flash $(WRITEFLASH_OPTS)
 endef

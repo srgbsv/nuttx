@@ -1,6 +1,9 @@
 /****************************************************************************
  * drivers/mtd/mtd_config_fs.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: 2018 Laczen
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -15,12 +18,6 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
  * License for the specific language governing permissions and limitations
  * under the License.
- *
- * NVS: non volatile storage in flash
- *
- * Copyright (c) 2018 Laczen
- *
- * SPDX-License-Identifier: Apache-2.0
  *
  ****************************************************************************/
 
@@ -102,6 +99,8 @@ struct nvs_fs
   uint32_t              data_wra;      /* Next data write address */
   uint32_t              step_addr;     /* For traverse */
   mutex_t               nvs_lock;
+  FAR struct pollfd     *fds;
+  pollevent_t           events;
 };
 
 /* Allocation Table Entry */
@@ -129,7 +128,7 @@ begin_packed_struct struct nvs_ate
  * Private Function Prototypes
  ****************************************************************************/
 
-/* MTD NVS opeation api */
+/* MTD NVS operation api */
 
 static int     mtdconfig_open(FAR struct file *filep);
 static int     mtdconfig_close(FAR struct file *filep);
@@ -673,7 +672,7 @@ static int nvs_flash_wrt_entry(FAR struct nvs_fs *fs, uint32_t id,
 
   if (rc)
     {
-      /* Write align block which inlcude part key + part data */
+      /* Write align block which include part key + part data */
 
       left = rc;
       memset(buf, fs->erasestate, NVS_ALIGN_SIZE);
@@ -1097,6 +1096,8 @@ static int nvs_startup(FAR struct nvs_fs *fs)
 
   fs->ate_wra = 0;
   fs->data_wra = 0;
+  fs->events = 0;
+  fs->fds = NULL;
 
   /* Get the device geometry. (Casting to uintptr_t first eliminates
    * complaints on some architectures where the sizeof long is different
@@ -1349,7 +1350,7 @@ static int nvs_startup(FAR struct nvs_fs *fs)
 
   /* Check if there exists an old entry with the same id and key
    * as the newest entry.
-   * If so, power loss occured before writing the old entry id as expired.
+   * If so, power loss occurred before writing the old entry id as expired.
    * We need to set old entry expired.
    */
 
@@ -1992,6 +1993,43 @@ static int nvs_next(FAR struct nvs_fs *fs,
 }
 
 /****************************************************************************
+ * Name: mtdconfig_notify
+ *
+ * Description:
+ *   Notify the poll if any waiter, or save events for next setup.
+ *
+ * Input Parameters:
+ *   fs       - Pointer to file system.
+ *   eventset - List of events to check for activity
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+static void mtdconfig_notify(FAR struct nvs_fs *fs, pollevent_t eventset)
+{
+  /* Handle events in two possible ways:
+   * 1. Notify waters directly if any exist(`fs->fds` is not NULL)
+   * 2. Save events for the following scenarios:
+   *    a. Events that have changed but weren't waited for
+   *       before being added to the interest list
+   *    b. Events occurring after `epoll_wait()` returns and
+   *       before it's called again
+   */
+
+  if (fs->fds)
+    {
+      poll_notify(&fs->fds, 1, eventset | fs->events);
+      fs->events = 0;
+    }
+  else
+    {
+      fs->events |= eventset;
+    }
+}
+
+/****************************************************************************
  * Name: mtdconfig_open
  ****************************************************************************/
 
@@ -2051,6 +2089,11 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
         /* Write a nvs item. */
 
         ret = nvs_write(fs, pdata);
+        if (ret >= 0)
+          {
+            mtdconfig_notify(fs, POLLPRI);
+          }
+
         break;
 
       case CFGDIOC_DELCONFIG:
@@ -2058,6 +2101,11 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
         /* Delete a nvs item. */
 
         ret = nvs_delete(fs, pdata);
+        if (ret >= 0)
+          {
+            mtdconfig_notify(fs, POLLPRI);
+          }
+
         break;
 
       case CFGDIOC_FIRSTCONFIG:
@@ -2098,11 +2146,27 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
 static int mtdconfig_poll(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup)
 {
-  if (setup)
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct nvs_fs *fs = inode->i_private;
+  int ret;
+
+  ret = nxmutex_lock(&fs->nvs_lock);
+  if (ret < 0)
     {
-      poll_notify(&fds, 1, POLLIN | POLLOUT);
+      return ret;
     }
 
+  if (setup)
+    {
+      fs->fds = fds;
+      mtdconfig_notify(fs, POLLIN | POLLOUT);
+    }
+  else
+    {
+      fs->fds = NULL;
+    }
+
+  nxmutex_unlock(&fs->nvs_lock);
   return OK;
 }
 

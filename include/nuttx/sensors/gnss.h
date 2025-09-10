@@ -33,6 +33,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define SENSOR_GNSS_IDX_GNSS               0
+#define SENSOR_GNSS_IDX_GNSS_SATELLITE     1
+#define SENSOR_GNSS_IDX_GNSS_MEASUREMENT   2
+#define SENSOR_GNSS_IDX_GNSS_CLOCK         3
+#define SENSOR_GNSS_IDX_GNSS_GEOFENCE      4
+#define SENSOR_GNSS_IDX_GNSS_MAX           5
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -156,7 +163,7 @@ struct gnss_lowerhalf_s
 
   /* Lower half driver pushes raw data by calling this function.
    * It is provided by upper half driver to lower half driver,
-   * if paramenter is_nmea is true, the data includes nmea message.
+   * if parameter is_nmea is true, the data includes nmea message.
    */
 
   gnss_push_data_t push_data;
@@ -200,8 +207,9 @@ extern "C"
  *             instance is bound to the GNSS driver and must persist as long
  *             as the driver persists.
  *   devno   - The user specifies which device of this type, from 0. If the
- *             devno alerady exists, -EEXIST will be returned.
+ *             devno already exists, -EEXIST will be returned.
  *   nbuffer - The number of events that the circular buffer can hold.
+ *   count   - The array size of nbuffer.
  *
  * Returned Value:
  *   OK if the driver was successfully register; A negated errno value is
@@ -210,7 +218,7 @@ extern "C"
  ****************************************************************************/
 
 int gnss_register(FAR struct gnss_lowerhalf_s *dev, int devno,
-                  uint32_t nbuffer);
+                  uint32_t nbuffer[], size_t count);
 
 /****************************************************************************
  * Name: gnss_unregister

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_pwm.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -570,7 +572,7 @@ static inline void set_enabled(struct rp23xx_pwm_lowerhalf_s  * priv)
 {
   irqstate_t flags = enter_critical_section();
 
-  modreg32(1 << priv->num, 1 << priv->num,  RP23XX_PWM_ENA);
+  modreg32(1 << priv->num, 1 << priv->num,  RP23XX_PWM_EN);
 
   leave_critical_section(flags);
 }
@@ -590,7 +592,7 @@ static inline void clear_enabled(struct rp23xx_pwm_lowerhalf_s  * priv)
 {
   irqstate_t flags = enter_critical_section();
 
-  modreg32(0, 1 << priv->num, RP23XX_PWM_ENA);
+  modreg32(0, 1 << priv->num, RP23XX_PWM_EN);
 
   leave_critical_section(flags);
 }

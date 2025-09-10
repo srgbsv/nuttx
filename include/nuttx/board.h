@@ -349,7 +349,7 @@ int board_switch_boot(FAR const char *system);
  * Input Parameters:
  *   path     - Path to the new application firmware image to be booted.
  *   hdr_size - Image header size in bytes. This value may be useful for
- *              skipping metadata information preprended to the application
+ *              skipping metadata information prepended to the application
  *              image.
  *
  * Returned Value:
@@ -820,7 +820,7 @@ int board_button_irq(int id, xcpt_t irqhandler, FAR void *arg);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_BOARD_CRASHDUMP
+#ifdef CONFIG_BOARD_CRASHDUMP_CUSTOM
 struct tcb_s;
 void board_crashdump(uintptr_t sp, FAR struct tcb_s *tcb,
                      FAR const char *filename, int lineno,

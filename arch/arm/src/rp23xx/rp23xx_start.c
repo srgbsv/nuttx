@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_start.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,6 +29,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <debug.h>
+#include <sys/param.h>
 
 #include <nuttx/init.h>
 #include <arch/board/board.h>
@@ -84,8 +87,21 @@ void __start(void)
 #ifdef CONFIG_BOOT_RUNFROMFLASH
   const uint32_t *src;
 #endif
-  uint32_t *dest;
-  int i;
+  uint32_t       *dest;
+  size_t         i;
+
+  /* Errata RP2350-E2 SIO SPINLOCK writes are mirrored at +0x80 offset
+   * Use only safe SPINLOCKS
+   * The following SIO spinlocks can be used normally as they do not alias
+   * with writable registers: 5, 6, 7, 10, 11, and 18 through 31.
+   */
+
+  const uint8_t safe_spinlocks[] =
+  {
+    5,  6,  7,  10, 11, 18, 19,
+    20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31
+  };
 
   /* Set MSP to the top of the IDLE stack */
 
@@ -128,12 +144,21 @@ void __start(void)
   rp23xx_clockconfig();
   rp23xx_boardearlyinitialize();
 
-  /* Initialize all spinlock states */
+  /* Initialize spinlock states
+   * Errata RP2350-E2 SIO SPINLOCK writes are mirrored at +0x80 offset
+   * Use only safe SPINLOCKS
+   * The following SIO spinlocks can be used normally as they do not alias
+   * with writable registers: 5, 6, 7, 10, 11, and 18 through 31.
+   */
 
-  for (i = 0; i < 32; i++)
+  for (i = 0; i < nitems(safe_spinlocks); i++)
     {
-      putreg32(0, RP23XX_SIO_SPINLOCK(i));
+      putreg32(0, RP23XX_SIO_SPINLOCK(safe_spinlocks[i]));
     }
+
+  /* Initialize the FPU */
+
+  arm_fpuconfig();
 
   /* Configure the uart so that we can get debug output as soon as possible */
 

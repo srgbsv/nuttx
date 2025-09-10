@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/x86_64/src/intel64/intel64_start.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,10 +33,12 @@
 
 #include <arch/acpi.h>
 
+#include <debug.h>
+
 #include "x86_64_internal.h"
 
-#include "intel64_cpu.h"
 #include "intel64_lowsetup.h"
+#include "intel64_cpu.h"
 
 /****************************************************************************
  * Public Data
@@ -107,7 +111,7 @@ static void x86_64_mb2_config(void)
             {
               /* We have to postpone frame buffer initialization because
                * at this boot stage we can't map >4GB memory yet and it's
-               * possible that frame bufer address is above 4GB.
+               * possible that frame buffer address is above 4GB.
                */
 
               g_mb_fb_tag = (struct multiboot_tag_framebuffer *)tag;
@@ -156,20 +160,43 @@ void __nxstart(void)
       *dest++ = 0;
     }
 
-#ifdef CONFIG_ARCH_MULTIBOOT2
-  /* Handle multiboot2 info */
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  /* Make sure that FS_BASE is not null */
 
-  x86_64_mb2_config();
+  write_fsbase((uintptr_t)(g_idle_topstack[0] -
+                           CONFIG_IDLETHREAD_STACKSIZE +
+                           sizeof(struct tls_info_s) +
+                           (_END_TBSS - _START_TDATA)));
 #endif
 
   /* Low-level, pre-OS initialization */
 
   intel64_lowsetup();
 
+#ifdef CONFIG_ARCH_MULTIBOOT2
+  /* Handle multiboot2 info */
+
+  x86_64_mb2_config();
+#endif
+
+#if defined(CONFIG_MULTBOOT2_FB_TERM)
+  x86_64_mb2_fbinitialize(g_mb_fb_tag);
+
+  lowsyslog("framebuffer initialized\n");
+#endif
+
 #ifdef CONFIG_ARCH_X86_64_ACPI
   /* Initialize ACPI */
 
   acpi_init(g_acpi_rsdp);
+#endif
+
+#ifndef CONFIG_SMP
+  /* Revoke the lower memory if not SMP, otherwise this is done in
+   * x86_64_ap_boot() after the initialization of the last AP is finished.
+   */
+
+  __revoke_low_memory();
 #endif
 
   /* Initialize CPU data (BSP and APs) */
@@ -189,10 +216,6 @@ void __nxstart(void)
   /* Configure timer */
 
   x86_64_timer_calibrate_freq();
-
-#ifdef CONFIG_LIB_SYSCALL
-  enable_syscall();
-#endif
 
   /* Store CPU IDs */
 

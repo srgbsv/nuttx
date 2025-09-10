@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/nuttsbi/sbi_internal.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -112,7 +114,7 @@ void sbi_start(void) noreturn_function;
  *   Send an inter-processor interrupt to all the harts defined
  *
  * Input Parameters:
- *   hmask - Mask fo CPU to send IPI
+ *   hmask - Mask for CPU to send IPI
  *   hbase - The firset CPU id to send
  *
  ****************************************************************************/

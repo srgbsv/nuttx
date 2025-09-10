@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_pio.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,8 +46,8 @@
 #define hw_claim_lock()         spin_lock_irqsave(&pio_lock)
 #define hw_claim_unlock(save)   spin_unlock_irqrestore(&pio_lock, save)
 #else
-#define hw_claim_lock()         spin_lock_irqsave(NULL)
-#define hw_claim_unlock(save)   spin_unlock_irqrestore(NULL, save)
+#define hw_claim_lock()         up_irq_save()
+#define hw_claim_unlock(save)   up_irq_restore(save)
 #endif
 
 /****************************************************************************

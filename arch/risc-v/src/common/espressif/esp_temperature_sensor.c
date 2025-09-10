@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/common/espressif/esp_temperature_sensor.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -42,7 +44,6 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/can/can.h>
 #include <nuttx/signal.h>
-#include <nuttx/arch.h>
 #include <nuttx/kthread.h>
 #ifdef CONFIG_ESPRESSIF_TEMP_UORB
 #include <nuttx/sensors/sensor.h>
@@ -63,12 +64,25 @@
 #include "hal/temperature_sensor_types.h"
 #include "soc/temperature_sensor_periph.h"
 #include "esp_efuse_rtc_calib.h"
+#include "hal/adc_ll.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #define ESP_TEMP_MIN_INTERVAL 30000
+
+#if !SOC_RCC_IS_INDEPENDENT
+#define TSENS_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
+#else
+#define TSENS_RCC_ATOMIC()
+#endif
+
+#if !SOC_RCC_IS_INDEPENDENT
+#define ADC_BUS_CLK_ATOMIC() PERIPH_RCC_ATOMIC()
+#else
+#define ADC_BUS_CLK_ATOMIC()
+#endif
 
 /****************************************************************************
  * Private Types
@@ -213,7 +227,7 @@ static temperature_sensor_attribute_t
  *
  * Input Parameters:
  *   p1 - First value to compare with other value
- *   p2 - Second value to compare with outher value
+ *   p2 - Second value to compare with other value
  *
  * Returned Value:
  *   Returns -1 if the first value has smaller error rate; 1 otherwise
@@ -260,7 +274,7 @@ static int temperature_sensor_attribute_table_sort(void)
  *
  * Description:
  *   This function selects least error rated temperature sensor attribute
- *   for given mesurement range.
+ *   for given measurement range.
  *
  * Input Parameters:
  *   priv - Pointer to the internal driver state structure.
@@ -364,8 +378,6 @@ static float temperature_sensor_parse_raw_value(uint32_t tsens_raw,
 
 static void esp_temperature_sensor_enable(struct esp_temp_priv_s *priv)
 {
-  temperature_sensor_ll_clk_enable(true);
-  temperature_sensor_ll_clk_sel(priv->clk_src);
   temperature_sensor_ll_enable(true);
   priv->tempstate = TEMP_SENSOR_ENABLE;
 }
@@ -410,6 +422,7 @@ static void esp_temp_sensor_register(struct esp_temp_priv_s *priv)
   register_driver(CONFIG_ESPRESSIF_TEMP_PATH, &g_esp_temp_sensor_fops,
                   0666, priv);
 #else
+  priv->lower.type = SENSOR_TYPE_TEMPERATURE;
   sensor_register(&priv->lower, CONFIG_ESPRESSIF_TEMP_PATH_DEVNO);
 #endif /* CONFIG_ESPRESSIF_TEMP_UORB */
 }
@@ -433,8 +446,28 @@ static int esp_temperature_sensor_install(struct esp_temp_priv_s *priv,
                                         struct esp_temp_sensor_config_t cfg)
 {
   int ret;
-  periph_module_enable(priv->module);
-  periph_module_reset(priv->module);
+
+  regi2c_saradc_enable();
+  ADC_BUS_CLK_ATOMIC()
+    {
+#if !SOC_TSENS_IS_INDEPENDENT_FROM_ADC
+      adc_ll_enable_bus_clock(true);
+#  if SOC_RCC_IS_INDEPENDENT
+      adc_ll_enable_func_clock(true);
+#  endif
+      adc_ll_reset_register();
+#endif
+    }
+
+  TSENS_RCC_ATOMIC()
+    {
+      temperature_sensor_ll_bus_clk_enable(true);
+      temperature_sensor_ll_reset_module();
+    }
+
+  temperature_sensor_ll_enable(true);
+
+  temperature_sensor_ll_clk_sel(priv->clk_src);
 
   ret = temperature_sensor_attribute_table_sort();
   if (ret < 0)
@@ -452,7 +485,6 @@ static int esp_temperature_sensor_install(struct esp_temp_priv_s *priv,
       goto err;
     }
 
-  regi2c_saradc_enable();
   temperature_sensor_ll_set_range(priv->tsens_attribute->reg_val);
   esp_temperature_sensor_disable(priv); /* Disable the sensor by default */
 
@@ -481,8 +513,11 @@ err:
 
 static void esp_temperature_sensor_uninstall(struct esp_temp_priv_s *priv)
 {
-  regi2c_saradc_disable();
-  periph_module_disable(priv->module);
+  temperature_sensor_ll_enable(false);
+  TSENS_RCC_ATOMIC()
+    {
+      temperature_sensor_ll_bus_clk_enable(false);
+    }
 }
 
 /****************************************************************************
@@ -611,7 +646,7 @@ static int esp_temperature_sensor_fetch(struct sensor_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
-static int esp_temperature_sensor_thread(int argc, FAR char **argv)
+static int esp_temperature_sensor_thread(int argc, char **argv)
 {
   struct esp_temp_priv_s *priv =
       (struct esp_temp_priv_s *)((uintptr_t)strtoul(argv[1], NULL, 16));
@@ -782,7 +817,7 @@ int esp_temperature_sensor_initialize(struct esp_temp_sensor_config_t cfg)
   int ret = 0;
   struct esp_temp_priv_s *priv = &esp_temp_priv;
 #ifdef CONFIG_ESPRESSIF_TEMP_UORB_POLL
-  FAR char *argv[2];
+  char *argv[2];
   char arg1[32];
 #endif
 

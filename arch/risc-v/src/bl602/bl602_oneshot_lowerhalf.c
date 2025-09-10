@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/bl602/bl602_oneshot_lowerhalf.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,7 +46,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Private definetions */
+/* Private definitions */
 #define TIMER_MAX_VALUE (0xFFFFFFFF)
 #define TIMER_CLK_DIV   (160)
 #define TIMER_CLK_FREQ  (160000000UL / (TIMER_CLK_DIV))

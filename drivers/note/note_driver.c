@@ -79,8 +79,8 @@
   ((drv)->ops->cpu_resume && ((drv)->ops->cpu_resume(drv, tcb, cpu), true))
 #define note_cpu_resumed(drv, tcb)                                           \
   ((drv)->ops->cpu_resumed && ((drv)->ops->cpu_resumed(drv, tcb), true))
-#define note_premption(drv, tcb, locked)                                     \
-  ((drv)->ops->premption && ((drv)->ops->premption(drv, tcb, locked), true))
+#define note_preemption(drv, tcb, locked)                                    \
+  ((drv)->ops->preemption && ((drv)->ops->preemption(drv, tcb, locked), true))
 #define note_csection(drv, tcb, enter)                                       \
   ((drv)->ops->csection && ((drv)->ops->csection(drv, tcb, enter), true))
 #define note_spinlock(drv, tcb, spinlock, type)                              \
@@ -611,7 +611,7 @@ void sched_note_add(FAR const void *data, size_t len)
           note_add(*driver, note, notelen);
         }
 
-      data += notelen;
+      data = (FAR void *)((uintptr_t)data + notelen);
       len -= notelen;
     }
 }
@@ -1051,7 +1051,7 @@ void sched_note_cpu_resumed(FAR struct tcb_s *tcb)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_SWITCH */
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
-void sched_note_premption(FAR struct tcb_s *tcb, bool locked)
+void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
 {
   struct note_preempt_s note;
   FAR struct note_driver_s **driver;
@@ -1064,7 +1064,7 @@ void sched_note_premption(FAR struct tcb_s *tcb, bool locked)
           continue;
         }
 
-      if (note_premption(*driver, tcb, locked))
+      if (note_preemption(*driver, tcb, locked))
         {
           continue;
         }
@@ -1224,7 +1224,9 @@ void sched_note_syscall_enter(int nr, int argc, ...)
   unsigned int length = 0;
   uintptr_t arg;
   va_list ap;
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   int argc_bak = argc;
+#endif
   int i;
 
   va_start(ap, argc);
@@ -1396,7 +1398,9 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
   struct note_wdog_s note;
   bool formatted = false;
   FAR struct tcb_s *tcb = this_task();
+  irqstate_t flags;
 
+  flags = enter_critical_section_wo_note();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (note_wdog(*driver, event, handler, arg))
@@ -1421,6 +1425,8 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 
       note_add(*driver, &note, sizeof(note));
     }
+
+  leave_critical_section_wo_note(flags);
 }
 #endif
 
@@ -1837,7 +1843,7 @@ void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
 
   if (oldm != NULL)
     {
@@ -1873,7 +1879,7 @@ void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
 }
 
 /****************************************************************************
@@ -1903,7 +1909,7 @@ void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -1939,7 +1945,7 @@ void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
 }
 #endif
 
@@ -1970,7 +1976,7 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -2006,7 +2012,7 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
 }
 #endif
 
@@ -2034,10 +2040,10 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
 void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
                            FAR struct note_filter_named_tag_s *newf)
 {
-  irqstate_t falgs;
   FAR struct note_driver_s **driver;
+  irqstate_t irq_mask;
 
-  falgs = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -2073,7 +2079,7 @@ void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, falgs);
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
 }
 #endif
 
@@ -2091,7 +2097,7 @@ void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
  *   PID - Task ID
  *
  * Returned Value:
- *   Retrun name if task name can be retrieved, otherwise NULL
+ *   Return name if task name can be retrieved, otherwise NULL
  ****************************************************************************/
 
 FAR const char *note_get_taskname(pid_t pid)

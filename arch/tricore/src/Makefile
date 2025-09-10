@@ -1,6 +1,8 @@
 ############################################################################
 # arch/tricore/src/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -23,6 +25,7 @@ include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_TC3XX),y)
 ARCH_SUBDIR = tc3xx
+include $(ARCH_SUBDIR)/Make.defs
 endif
 
 ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src

@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/arm64/src/common/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -22,7 +24,7 @@ set(SRCS arm64_head.S)
 
 # TODO: support kernel startup obj ctr0
 
-list(APPEND SRCS arm64_vector_table.S arm64_vectors.S arm64_smccc.S)
+list(APPEND SRCS arm64_vector_table.S arm64_vectors.S)
 list(APPEND SRCS arm64_fork_func.S)
 
 # Common C source files ( OS call up_xxx)
@@ -57,8 +59,20 @@ if(CONFIG_ARM64_GIC_VERSION EQUAL 2)
   endif()
 endif()
 
+if(CONFIG_ARCH_HAVE_DEBUG)
+  list(APPEND SRCS arm64_hwdebug.c)
+endif()
+
+if(CONFIG_ARCH_HAVE_EL3)
+  list(APPEND SRCS arm64_smccc.S)
+endif()
+
 if(CONFIG_ARCH_HAVE_MMU)
   list(APPEND SRCS arm64_mmu.c)
+endif()
+
+if(CONFIG_ARM64_MTE)
+  list(APPEND SRCS arm64_mte.c)
 endif()
 
 if(CONFIG_ARCH_HAVE_MPU)

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/common/espressif/esp_rmt.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -113,6 +115,18 @@
           .filter_en = true,                      \
       }                                           \
   }
+
+#if SOC_PERIPH_CLK_CTRL_SHARED
+#define RMT_CLOCK_SRC_ATOMIC() PERIPH_RCC_ATOMIC()
+#else
+#define RMT_CLOCK_SRC_ATOMIC()
+#endif
+
+#if !SOC_RCC_IS_INDEPENDENT
+#define RMT_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
+#else
+#define RMT_RCC_ATOMIC()
+#endif
 
 #define rmt_item32_t rmt_symbol_word_t
 
@@ -403,12 +417,18 @@ static void rmt_module_enable(void)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+  flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
 
   if (g_rmtdev_common.rmt_module_enabled == false)
     {
-      periph_module_reset(rmt_periph_signals.groups[0].module);
-      periph_module_enable(rmt_periph_signals.groups[0].module);
+      RMT_RCC_ATOMIC()
+        {
+          rmt_ll_enable_bus_clock(0, true);
+          rmt_ll_reset_register(0);
+        }
+
+      periph_module_reset(PERIPH_RMT_MODULE);
+      periph_module_enable(PERIPH_RMT_MODULE);
       g_rmtdev_common.rmt_module_enabled = true;
     }
 
@@ -454,7 +474,7 @@ static int rmt_set_rx_thr_intr_en(rmt_channel_t channel, bool en,
           return -EINVAL;
         }
 
-      flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+      flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
       rmt_ll_rx_set_limit(g_rmtdev_common.hal.regs,
                           RMT_DECODE_RX_CHANNEL(channel), evt_thresh);
       mask = RMT_LL_EVENT_RX_THRES(RMT_DECODE_RX_CHANNEL(channel));
@@ -463,7 +483,7 @@ static int rmt_set_rx_thr_intr_en(rmt_channel_t channel, bool en,
     }
   else
     {
-      flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+      flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
       mask = RMT_LL_EVENT_RX_THRES(RMT_DECODE_RX_CHANNEL(channel));
       rmt_ll_enable_interrupt(g_rmtdev_common.hal.regs, mask, false);
       spin_unlock_irqrestore(&g_rmtdev_common.rmt_spinlock, flags);
@@ -504,7 +524,7 @@ static int rmt_rx_start(rmt_channel_t channel, bool rx_idx_rst)
 
   DEBUGASSERT(RMT_IS_RX_CHANNEL(channel));
 
-  flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+  flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
 
   rmt_ll_rx_enable(g_rmtdev_common.hal.regs, ch, false);
   if (rx_idx_rst)
@@ -551,7 +571,7 @@ static int rmt_tx_start(rmt_channel_t channel, bool tx_idx_rst)
 
   DEBUGASSERT(RMT_IS_TX_CHANNEL(channel));
 
-  flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+  flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
   if (tx_idx_rst)
     {
       rmt_ll_tx_reset_pointer(g_rmtdev_common.hal.regs, channel);
@@ -609,7 +629,7 @@ static int rmt_set_tx_loop_mode(rmt_channel_t channel, bool loop_en)
 
   DEBUGASSERT(RMT_IS_TX_CHANNEL(channel));
 
-  flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+  flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
   rmt_ll_tx_enable_loop(g_rmtdev_common.hal.regs, channel, loop_en);
   spin_unlock_irqrestore(&g_rmtdev_common.rmt_spinlock, flags);
 
@@ -651,7 +671,7 @@ static int rmt_set_tx_thr_intr_en(rmt_channel_t channel, bool en,
 
       DEBUGASSERT(evt_thresh <= item_block_len);
 
-      flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+      flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
       rmt_ll_tx_set_limit(g_rmtdev_common.hal.regs, channel, evt_thresh);
       rmt_ll_enable_interrupt(g_rmtdev_common.hal.regs,
                               RMT_LL_EVENT_TX_THRES(channel), true);
@@ -659,7 +679,7 @@ static int rmt_set_tx_thr_intr_en(rmt_channel_t channel, bool en,
     }
   else
     {
-      flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+      flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
       rmt_ll_enable_interrupt(g_rmtdev_common.hal.regs,
                               RMT_LL_EVENT_TX_THRES(channel), false);
       spin_unlock_irqrestore(&g_rmtdev_common.rmt_spinlock, flags);
@@ -801,7 +821,7 @@ static int rmt_internal_config(rmt_dev_t *dev,
       return -EINVAL;
     }
 
-  flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+  flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
 
   rmt_ll_enable_mem_access_nonfifo(dev, true);
 
@@ -843,6 +863,11 @@ static int rmt_internal_config(rmt_dev_t *dev,
                                  1, 0, 0);
     }
 
+  RMT_CLOCK_SRC_ATOMIC()
+    {
+      rmt_ll_enable_group_clock(dev, true);
+    }
+
   spin_unlock_irqrestore(&g_rmtdev_common.rmt_spinlock, flags);
 
 #if SOC_RMT_CHANNEL_CLK_INDEPENDENT
@@ -866,7 +891,7 @@ static int rmt_internal_config(rmt_dev_t *dev,
       uint8_t carrier_level = rmt_param->tx_config.carrier_level;
       uint8_t idle_level = rmt_param->tx_config.idle_level;
 
-      flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+      flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
       rmt_ll_tx_set_channel_clock_div(dev, channel, clk_div);
       rmt_ll_tx_set_mem_blocks(dev, channel, mem_cnt);
       rmt_ll_tx_reset_pointer(dev, channel);
@@ -918,7 +943,7 @@ static int rmt_internal_config(rmt_dev_t *dev,
       uint8_t filter_cnt = rmt_param->rx_config.filter_ticks_thresh;
       uint16_t threshold = rmt_param->rx_config.idle_threshold;
 
-      flags = spin_lock_irqsave(g_rmtdev_common.rmt_spinlock);
+      flags = spin_lock_irqsave(&g_rmtdev_common.rmt_spinlock);
       rmt_ll_rx_set_channel_clock_div(dev, RMT_DECODE_RX_CHANNEL(channel),
                                       clk_div);
       rmt_ll_rx_set_mem_blocks(dev, RMT_DECODE_RX_CHANNEL(channel), mem_cnt);
@@ -976,7 +1001,7 @@ static int rmt_internal_config(rmt_dev_t *dev,
 
       spin_unlock_irqrestore(&g_rmtdev_common.rmt_spinlock, flags);
 
-      rmtinfo("Rmt Rx Channel %u|Gpio %u|Sclk_Hz %"PRIu32"|Div %u|Thresold "
+      rmtinfo("Rmt Rx Channel %u|Gpio %u|Sclk_Hz %"PRIu32"|Div %u|Threshold "
               "%u|Filter %u", channel, gpio_num, rmt_source_clk_hz, clk_div,
               threshold, filter_cnt);
     }

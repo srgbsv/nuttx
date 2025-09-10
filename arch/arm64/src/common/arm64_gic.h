@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_gic.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -84,6 +86,8 @@
 #define ICENABLER(base, n)      (base + GIC_DIST_ICENABLER + (n) * 4)
 #define ISPENDR(base, n)        (base + GIC_DIST_ISPENDR + (n) * 4)
 #define ICPENDR(base, n)        (base + GIC_DIST_ICPENDR + (n) * 4)
+#define ISACTIVER(base, n)      (base + GIC_DIST_ISACTIVER + (n) * 4)
+#define ICACTIVER(base, n)      (base + GIC_DIST_ICACTIVER + (n) * 4)
 #define IPRIORITYR(base, n)     (base + GIC_DIST_IPRIORITYR + n)
 #define ITARGETSR(base, n)      (base + GIC_DIST_ITARGETSR + (n) * 4)
 #define ICFGR(base, n)          (base + GIC_DIST_ICFGR + (n) * 4)
@@ -334,7 +338,7 @@ int arm64_gic_v2m_initialize(void);
  *
  *   1. It saves the current task state at the head of the current assigned
  *      task list.
- *   2. It porcess g_delivertasks
+ *   2. It processes g_delivertasks
  *   3. Returns from interrupt, restoring the state of the new task at the
  *      head of the ready to run list.
  *

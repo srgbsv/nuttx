@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/imx9/imx9_lpspi.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -2067,7 +2069,7 @@ struct spi_dev_s *imx9_lpspibus_initialize(int bus)
  * Name: imx9_lpspibus_uninitialize
  *
  * Description:
- *   Unitialize the selected SPI bus
+ *   Uninitialize the selected SPI bus
  *
  * Input Parameters:
  *   dev -      Device-specific state data

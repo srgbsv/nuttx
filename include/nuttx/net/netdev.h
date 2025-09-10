@@ -2,7 +2,8 @@
  * include/nuttx/net/netdev.h
  *
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2007, 2009, 2011-2018 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2007,2009 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2011-2018 Gregory Nutt. All rights reserved.
  * SPDX-FileCopyrightText: 2001-2003, Adam Dunkels. All rights reserved.
  * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
@@ -215,6 +216,17 @@
 #  define NETDEV_V6ADDR_ONLINK(dev,addr) \
      (netdev_ipv6_lookup(dev, addr, true) != NULL)
 #endif
+
+/* MDIO Manageable Device (MMD) support with SIOCxMIIREG ioctl commands */
+
+#define mdio_phy_id_is_c45(phy_id) \
+    (((phy_id) & MDIO_PHY_ID_C45) && !((phy_id) & ~MDIO_PHY_ID_C45_MASK))
+
+#define mdio_phy_id_prtad(phy_id) \
+    ((uint16_t)(((phy_id) & MDIO_PHY_ID_PRTAD) >> 5))
+
+#define mdio_phy_id_devad(phy_id) \
+    ((uint16_t)((phy_id) & MDIO_PHY_ID_DEVAD))
 
 /****************************************************************************
  * Public Types
@@ -745,7 +757,7 @@ int devif_poll(FAR struct net_driver_s *dev, devif_poll_callback_t callback);
  *   If the destination IPv6 address is in the local network (determined
  *   by logical ANDing of netmask and our IPv6 address), the function
  *   checks the Neighbor Table to see if an entry for the destination IPv6
- *   address is found.  If so, an L2 header is pre-pended at the beginning
+ *   address is found.  If so, an L2 header is prepended at the beginning
  *   of the packet and the function returns.
  *
  *   If no Neighbor Table entry is found for the destination IPv6 address,

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/esp32c3/esp_ble.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -104,7 +106,7 @@ static esp_vhci_host_callback_t vhci_host_cb =
  * Name: esp_ble_send_ready
  *
  * Description:
- *   If the controller could send HCI comand will callback this function.
+ *   If the controller could send HCI command will callback this function.
  *
  * Input Parameters:
  *   None

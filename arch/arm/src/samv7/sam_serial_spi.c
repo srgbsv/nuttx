@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/samv7/sam_serial_spi.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -816,9 +818,10 @@ struct spi_dev_s *sam_serial_spi_initialize(int port)
 
       leave_critical_section(flags);
 
-      /* Configure mode register. */
+      /* Configure mode register. Set master mode, 8 bits and SPI Mode 0 */
 
-      regval = UART_MR_MODE_SPIMSTR | UART_MR_CLKO | UART_MR_CHRL_8BITS;
+      regval = UART_MR_MODE_SPIMSTR | UART_MR_CLKO | UART_MR_CHRL_8BITS |
+               UART_MR_CPHA;
       serial_putreg(priv, SAM_UART_MR_OFFSET, regval);
 
       /* Enable receiver & transmitter */

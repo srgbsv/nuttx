@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/tricore/include/irq.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -42,9 +44,20 @@
 
 #include <arch/chip/irq.h>
 
+#if defined(CONFIG_ARCH_TC3XX)
+#  include <arch/tc3xx/irq.h>
+#endif
+
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
+
+/* Address <--> Context Save Areas */
+
+#define tricore_csa2addr(csa) ((uintptr_t *)((((csa) & 0x000F0000) << 12) \
+                                             | (((csa) & 0x0000FFFF) << 6)))
+#define tricore_addr2csa(addr) ((uintptr_t)(((((uintptr_t)(addr)) & 0xF0000000) >> 12) \
+                                            | (((uintptr_t)(addr) & 0x003FFFC0) >> 6)))
 
 #ifndef __ASSEMBLY__
 
@@ -102,7 +115,7 @@ void up_irq_enable(void);
  * Inline functions
  ****************************************************************************/
 
-noinstrument_function static inline uintptr_t up_getsp(void)
+noinstrument_function static inline_function uintptr_t up_getsp(void)
 {
 #ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
   return (uintptr_t)__get_sp();
@@ -119,7 +132,7 @@ noinstrument_function static inline uintptr_t up_getsp(void)
  *
  ****************************************************************************/
 
-noinstrument_function static inline irqstate_t up_irq_save(void)
+noinstrument_function static inline_function irqstate_t up_irq_save(void)
 {
   return __disable_and_save();
 }
@@ -132,7 +145,8 @@ noinstrument_function static inline irqstate_t up_irq_save(void)
  *
  ****************************************************************************/
 
-noinstrument_function static inline void up_irq_restore(irqstate_t flags)
+noinstrument_function static inline_function
+void up_irq_restore(irqstate_t flags)
 {
   __restore(flags);
 }
@@ -183,6 +197,26 @@ static inline_function bool up_interrupt_context(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: up_getusrsp
+ ****************************************************************************/
+
+static inline_function uintptr_t up_getusrsp(void *regs)
+{
+  uintptr_t *csa = regs;
+
+  while (((uintptr_t)csa & PCXI_UL) == 0)
+    {
+      csa = tricore_csa2addr((uintptr_t)csa);
+      csa = (uintptr_t *)csa[0];
+    }
+
+  csa = tricore_csa2addr((uintptr_t)csa);
+
+  return csa[REG_SP];
+}
+
 #endif /* __ASSEMBLY__ */
 
 #undef EXTERN

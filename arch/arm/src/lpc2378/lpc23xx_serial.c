@@ -1,14 +1,12 @@
 /****************************************************************************
  * arch/arm/src/lpc2378/lpc23xx_serial.c
  *
- *   Copyright (C) 2010 Rommel Marcelo. All rights reserved.
- *   Author: Rommel Marcelo
- *   With updates by: Gregory Nutt <gnutt@nuttx.org>
- *
- * This file is part of the NuttX RTOS and based on the lpc2148 port:
- *
- *   Copyright (C) 2010, 2012-2013 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2010 Rommel Marcelo. All rights reserved.
+ * SPDX-FileCopyrightText: 2010 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2012-2013 Gregory Nutt. All rights reserved.
+ * SPDX-FileContributor: Rommel Marcelo
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -271,7 +269,7 @@ static inline void up_waittxready(struct up_dev_s *priv)
 
   for (tmp = 1000; tmp > 0; tmp--)
     {
-      /* Check if the tranmitter holding register (THR) is empty */
+      /* Check if the transmitter holding register (THR) is empty */
 
       if ((up_serialin(priv, UART_LSR_OFFSET) & LSR_THRE) != 0)
         {
@@ -867,7 +865,7 @@ static bool up_txempty(struct uart_dev_s *dev)
  * Description:
  *   Performs the low level UART initialization early in
  *   debug so that the serial console will be available
- *   during bootup.  This must be called before arm_serialinit.
+ *   during boot up.  This must be called before arm_serialinit.
  *
  ****************************************************************************/
 

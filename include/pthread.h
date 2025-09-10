@@ -49,7 +49,7 @@
  * SP_LOCKED and SP_UNLOCKED must constants of type spinlock_t.
  */
 
-#  include <arch/spinlock.h>
+#  include <nuttx/spinlock_type.h>
 #endif
 
 /****************************************************************************
@@ -107,6 +107,7 @@
 
 #define PTHREAD_STACK_MIN             CONFIG_PTHREAD_STACK_MIN
 #define PTHREAD_STACK_DEFAULT         CONFIG_PTHREAD_STACK_DEFAULT
+#define PTHREAD_GUARD_DEFAULT         CONFIG_PTHREAD_GUARDSIZE_DEFAULT
 
 /* Values for the pthread inheritsched attribute */
 
@@ -237,6 +238,7 @@ struct pthread_attr_s
 
   FAR void  *stackaddr;        /* Address of memory to be used as stack */
   size_t stacksize;            /* Size of the stack allocated for the pthread */
+  size_t guardsize;            /* Size of the guard area for the pthread's stack */
 
 #ifdef CONFIG_SCHED_SPORADIC
   struct timespec repl_period; /* Replenishment period */
@@ -269,7 +271,7 @@ struct pthread_cond_s
 {
   sem_t sem;
   clockid_t clockid;
-  uint16_t wait_count;
+  int wait_count;
 };
 
 #ifndef __PTHREAD_COND_T_DEFINED
@@ -333,25 +335,46 @@ typedef struct pthread_mutex_s pthread_mutex_t;
 #  endif
 #endif
 
+#ifdef CONFIG_PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT
+#  define PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT SEM_PRIO_INHERIT
+#else
+#  define PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT 0
+#endif
+
+#ifdef CONFIG_PTHREAD_MUTEX_DEFAULT_PRIO_PROTECT
+#  define PTHREAD_MUTEX_DEFAULT_PRIO_PROTECT SEM_PRIO_PROTECT
+#else
+#  define PTHREAD_MUTEX_DEFAULT_PRIO_PROTECT 0
+#endif
+
+#define PTHREAD_MUTEX_DEFAULT_PRIO_FLAGS (PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT | \
+                                          PTHREAD_MUTEX_DEFAULT_PRIO_PROTECT)
+
+#define PTHREAD_NXMUTEX_INITIALIZER  {                                    \
+    NXSEM_INITIALIZER(NXSEM_NO_MHOLDER,                                   \
+                      SEM_TYPE_MUTEX | PTHREAD_MUTEX_DEFAULT_PRIO_FLAGS)}
+#define PTHREAD_NXRMUTEX_INITIALIZER {PTHREAD_NXMUTEX_INITIALIZER, 0}
+
 #if defined(CONFIG_PTHREAD_MUTEX_TYPES) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
 #  define PTHREAD_MUTEX_INITIALIZER {NULL, __PTHREAD_MUTEX_DEFAULT_FLAGS, \
                                      PTHREAD_MUTEX_DEFAULT, \
-                                     NXRMUTEX_INITIALIZER}
+                                     PTHREAD_NXRMUTEX_INITIALIZER}
+
 #  define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP \
                                     {NULL, __PTHREAD_MUTEX_DEFAULT_FLAGS, \
                                      PTHREAD_MUTEX_RECURSIVE, \
-                                     NXRMUTEX_INITIALIZER,}
+                                     PTHREAD_NXRMUTEX_INITIALIZER,}
 #elif defined(CONFIG_PTHREAD_MUTEX_TYPES)
 #  define PTHREAD_MUTEX_INITIALIZER {PTHREAD_MUTEX_DEFAULT, \
-                                     NXRMUTEX_INITIALIZER,}
+                                     PTHREAD_NXRMUTEX_INITIALIZER,}
 #  define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP \
                                     {PTHREAD_MUTEX_RECURSIVE, \
-                                     NXRMUTEX_INITIALIZER}
+                                     PTHREAD_NXRMUTEX_INITIALIZER}
 #elif !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
 #  define PTHREAD_MUTEX_INITIALIZER {NULL, __PTHREAD_MUTEX_DEFAULT_FLAGS,\
-                                     NXMUTEX_INITIALIZER}
+                                     PTHREAD_NXMUTEX_INITIALIZER}
 #else
-#  define PTHREAD_MUTEX_INITIALIZER {NXMUTEX_INITIALIZER}
+#  define PTHREAD_MUTEX_INITIALIZER {PTHREAD_NXMUTEX_INITIALIZER}
 #endif
 
 struct pthread_barrierattr_s
@@ -508,6 +531,12 @@ int pthread_attr_getstack(FAR const pthread_attr_t *attr,
 int pthread_attr_setscope(FAR pthread_attr_t *attr, int scope);
 int pthread_attr_getscope(FAR const pthread_attr_t *attr, FAR int *scope);
 
+/* Set/get guardsize attribute in thread attributes object */
+
+int pthread_attr_setguardsize(FAR pthread_attr_t *attr, size_t guardsize);
+int pthread_attr_getguardsize(FAR const pthread_attr_t *attr,
+                              FAR size_t *guardsize);
+
 /* Set or get the name of a thread */
 
 int pthread_setname_np(pthread_t thread, FAR const char *name);
@@ -596,6 +625,11 @@ int pthread_getaffinity_np(pthread_t thread, size_t cpusetsize,
 #define pthread_setaffinity_np(...) (-ENOSYS)
 #define pthread_getaffinity_np(...) (-ENOSYS)
 #endif
+
+/* Concurrency level */
+
+int pthread_setconcurrency(int new_level);
+int pthread_getconcurrency(void);
 
 /* Thread-specific Data Interfaces */
 

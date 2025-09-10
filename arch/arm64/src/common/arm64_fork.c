@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_fork.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,7 @@
 
 #include <nuttx/sched.h>
 #include <nuttx/arch.h>
+#include <arch/barriers.h>
 #include <arch/irq.h>
 #include "sched/sched.h"
 
@@ -64,7 +67,7 @@ void arm64_fork_fpureg_save(struct fork_s *context)
   flags = enter_critical_section();
 
   arm64_fpu_save(context->fpu);
-  ARM64_DSB();
+  UP_DSB();
 
   leave_critical_section(flags);
 }
@@ -221,6 +224,11 @@ pid_t arm64_fork(const struct fork_s *context)
 #endif /* CONFIG_SUPPRESS_INTERRUPTS */
 
   child->cmn.xcp.regs[REG_ELR]    = (uint64_t)context->lr;
+
+  child->cmn.xcp.regs[REG_SCTLR_EL1]  = read_sysreg(sctlr_el1);
+#ifdef CONFIG_ARM64_MTE
+  child->cmn.xcp.regs[REG_SCTLR_EL1] |= SCTLR_TCF1_BIT;
+#endif
 
   child->cmn.xcp.regs[REG_EXE_DEPTH] = 0;
   child->cmn.xcp.regs[REG_SP_ELX]    = newsp - XCPTCONTEXT_SIZE;

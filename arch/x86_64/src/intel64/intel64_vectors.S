@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/x86_64/src/intel64/intel64_vector.S
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -39,7 +41,6 @@
  ****************************************************************************/
 
 	.globl    irq_handler
-	.globl    isr_handler
 	.globl    irq_xcp_regs
 	.globl    g_interrupt_stack
 	.globl    g_interrupt_stack_end
@@ -59,7 +60,7 @@
 vector_isr\intno:
 	cli               /* Disable interrupts firstly. */
 
-	/* CPU has sawitched to the ISR stack using IST */
+	/* CPU has sawitched to the ISR stack using Interrupt Stack Table */
 
 	pushq  $0         /* Push a dummy error code. */
 
@@ -67,7 +68,7 @@ vector_isr\intno:
 	pushq   %rdi
 	pushq   %rsi
 	movq    $\intno,   %rsi     /* INT Number is saved to 2nd parameter of function call */
-	jmp     isr_common           /* Go to the common ISR handler code. */
+	jmp     irq_common           /* Go to the common IRQ handler code. */
 	.endm
 
 	/* This macro creates a stub for an ISR which passes it's own
@@ -79,13 +80,13 @@ vector_isr\intno:
 vector_isr\intno:
 	cli               /* Disable interrupts firstly. */
 
-	/* CPU has sawitched to the ISR stack using IST */
+	/* CPU has sawitched to the ISR stack using Interrupt Stack Table */
 
 	/* Save rdi, rsi */
 	pushq   %rdi
 	pushq   %rsi
 	movq    $\intno,   %rsi     /* INT Number is saved to 2nd parameter of function call */
-	jmp     isr_common          /* Go to the common ISR handler code. */
+	jmp     irq_common          /* Go to the common IRQ handler code. */
 	.endm
 
 	/* This macro creates a stub for an IRQ - the first parameter is
@@ -97,7 +98,7 @@ vector_isr\intno:
 	vector_irq\irqno:
 	cli               /* Disable interrupts firstly. */
 
-	/* CPU has switched to the IRQ stack using IST */
+	/* CPU has switched to the IRQ stack using Interrupt Stack Table */
 
 	pushq   $0         /* Push a dummy error code. */
 
@@ -691,69 +692,6 @@ vector_isr\intno:
 	.balign 16
 
 /****************************************************************************
- * Name: isr_common
- *
- * Description:
- *   This is the common ISR logic. It saves the processor state, sets up for
- *   kernel mode segments, calls the C-level fault handler, and finally
- *   restores the stack frame.
- *
- ****************************************************************************/
-
-isr_common:
-	/* Already swap to the interrupt stack */
-	/* stack is automatically recovered by iretq using task state */
-
-	/* x86_64 don't have pusha, we have to do things manually */
-	/* RDI and RSI are pushed above for handling IRQ no */
-	pushq   %rdx
-	pushq   %rcx
-	pushq   %r8
-	pushq   %r9
-
-	pushq   %r15
-	pushq   %r14
-	pushq   %r13
-	pushq   %r12
-	pushq   %r11
-	pushq   %r10
-	pushq   %rbp
-	pushq   %rbx
-	pushq   %rax
-
-	xor     %rax, %rax    /* Reset rax */
-	mov     %ds, %ax      /* Lower 16-bits of rax. */
-	pushq   %rax          /* Save the data segment descriptor */
-	mov     %es, %ax      /* Lower 16-bits of rax. */
-	pushq   %rax          /* Save the data segment descriptor */
-	mov     %gs, %ax      /* Lower 16-bits of rax. */
-	pushq   %rax          /* Save the data segment descriptor */
-	mov     %fs, %ax      /* Lower 16-bits of rax. */
-	pushq   %rax          /* Save the data segment descriptor */
-
-	/* Align to 64-bytes boundary */
-	leaq    -(XMMAREA_REG_ALIGN * 8)(%rsp), %rsp
-
-	/* Save xmm registers */
-	leaq    -XCPTCONTEXT_XMM_AREA_SIZE(%rsp), %rsp
-#ifndef CONFIG_ARCH_X86_64_HAVE_XSAVE
-	fxsaveq (%rsp)
-#else
-	movl $XSAVE_STATE_COMPONENTS, %eax
-	xor     %edx, %edx
-	xsave   (%rsp)
-#endif
-
-	/* The current value of the SP points to the beginning of the state save
-	 * structure.  Save that in RDI as the input parameter to isr_handler.
-	 */
-
-	mov     %rsp, %rdi
-	call    isr_handler
-	jmp     .Lreturn
-	.size   isr_common, . - isr_common
-
-/****************************************************************************
  * Name: irq_common
  *
  * Description:
@@ -808,6 +746,11 @@ irq_common:
 	mov     %fs, %ax               /* Lower 16-bits of rax. */
 	movq    %rax, (8*REG_FS)(%rdi) /* Save the data segment descriptor */
 
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+	rdfsbase %rax
+	movq     %rax, (8*REG_FSBASE)(%rdi)
+#endif
+
 	/* Save registers from stack */
 
 	movq    0(%rsp), %rcx
@@ -848,7 +791,7 @@ irq_common:
 	add     $8, %rsp
 	popq    %rdi
 
-	/* The common return point for both isr_handler and irq_handler */
+	/* The common return point for irq_handler */
 
 .Lreturn:
 
@@ -870,7 +813,7 @@ irq_common:
 
 	movq    $0x0, (8*REG_AUX)(%rdi)
 
-	/* A context swith will be performed. RAX holds the address of the new
+	/* A context switch will be performed. RAX holds the address of the new
 	 * register save structure.
 	 *
 	 * Jump to x86_64_fullcontextrestore().  We perform a call here, but that function
@@ -923,7 +866,7 @@ irq_common:
 
 	add     $8, %rsp
 
-	iretq                /* Pops 5 things at once: CS, RIP, RFLAGS and SS and RSP */
+	iretq                /* Pops 5 things at once: RIP, CS, RFLAGS RSP and SS */
 	.size	irq_common, . - irq_common
 	.end
 

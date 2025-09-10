@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/x86_64/src/intel64/intel64_cpustart.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -35,8 +37,11 @@
 #include "sched/sched.h"
 #include "init/init.h"
 
+#include "x86_64_internal.h"
+
 #include "intel64_lowsetup.h"
 #include "intel64_cpu.h"
+#include "x86_64_hwdebug.h"
 
 /****************************************************************************
  * Private Types
@@ -87,7 +92,7 @@ static int x86_64_ap_startup(int cpu)
   /* Wait for 10 ms */
 
   up_mdelay(10);
-  SP_DMB();
+  UP_DMB();
 
   /* Send an STARTUP IPI to the CPU */
 
@@ -99,7 +104,7 @@ static int x86_64_ap_startup(int cpu)
   do
     {
       up_udelay(300);
-      SP_DMB();
+      UP_DMB();
       sinfo("wait for startup cpu=%d...\n", cpu);
     }
   while (x86_64_cpu_ready_get(cpu) == false);
@@ -146,8 +151,16 @@ void x86_64_ap_boot(void)
 
   x86_64_cpu_priv_set(cpu);
 
-  tcb = this_task();
+  tcb = current_task(cpu);
   UNUSED(tcb);
+
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  /* Make sure that FS_BASE is not null */
+
+  write_fsbase((uintptr_t)tcb->stack_alloc_ptr +
+               sizeof(struct tls_info_s) +
+               (_END_TBSS - _START_TDATA));
+#endif
 
   /* Configure interrupts */
 
@@ -165,8 +178,10 @@ void x86_64_ap_boot(void)
 
   irq_attach(SMP_IPI_CALL_IRQ, x86_64_smp_call_handler, NULL);
   irq_attach(SMP_IPI_SCHED_IRQ, x86_64_smp_sched_handler, NULL);
-  up_enable_irq(SMP_IPI_CALL_IRQ);
-  up_enable_irq(SMP_IPI_SCHED_IRQ);
+
+  /* NOTE: IPC interrupts don't use IOAPIC but interrupts are sent
+   * directly to CPU, so we don't use up_enable_irq() API here.
+   */
 
 #ifdef CONFIG_STACK_COLORATION
   /* If stack debug is enabled, then fill the stack with a
@@ -187,6 +202,14 @@ void x86_64_ap_boot(void)
     {
       __revoke_low_memory();
     }
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+  /* Initialize hardware debug interface */
+
+  x86_64_hwdebug_init();
+#endif
+
+  up_update_task(tcb);
 
   /* Then transfer control to the IDLE task */
 

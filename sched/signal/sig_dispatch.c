@@ -53,7 +53,6 @@
 struct sig_arg_s
 {
   pid_t pid;
-  cpu_set_t saved_affinity;
   bool need_restore;
 };
 
@@ -82,7 +81,6 @@ static int sig_handler(FAR void *cookie)
 
   if (arg->need_restore)
     {
-      tcb->affinity = arg->saved_affinity;
       tcb->flags &= ~TCB_FLAG_CPU_LOCKED;
     }
 
@@ -105,20 +103,19 @@ static int sig_handler(FAR void *cookie)
  * Returned Value:
  *   Returns 0 (OK) on success or a negated errno value on failure.
  *
+ * Assumptions:
+ *   Called in critical section
+ *
  ****************************************************************************/
 
-static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
+static int nxsig_queue_action(FAR struct tcb_s *stcb,
+                              FAR sigactq_t *sigact,
+                              FAR siginfo_t *info)
 {
-  FAR sigactq_t *sigact;
   FAR sigq_t    *sigq;
-  irqstate_t     flags;
   int            ret = OK;
 
   DEBUGASSERT(stcb != NULL && stcb->group != NULL);
-
-  /* Find the group sigaction associated with this signal */
-
-  sigact = nxsig_find_action(stcb->group, info->si_signo);
 
   /* Check if a valid signal handler is available and if the signal is
    * unblocked. NOTE: There is no default action.
@@ -152,7 +149,6 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
 
           /* Put it at the end of the pending signals list */
 
-          flags = enter_critical_section();
           sq_addlast((FAR sq_entry_t *)sigq, &(stcb->sigpendactionq));
 
           /* Then schedule execution of the signal handling action on the
@@ -177,11 +173,8 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
                     }
                   else
                     {
-                      arg.saved_affinity = stcb->affinity;
                       arg.need_restore   = true;
-
                       stcb->flags        |= TCB_FLAG_CPU_LOCKED;
-                      CPU_SET(stcb->cpu, &stcb->affinity);
                     }
 
                   arg.pid = stcb->pid;
@@ -194,8 +187,6 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
                   up_schedule_sigaction(stcb);
                 }
             }
-
-          leave_critical_section(flags);
         }
     }
 
@@ -208,58 +199,26 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
  * Description:
  *   Allocate a pending signal list entry
  *
+ * Assumptions:
+ *   Called with g_sigpendingsignal locked
+ *
  ****************************************************************************/
 
 static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
 {
   FAR sigpendq_t *sigpend;
-  irqstate_t      flags;
 
-  /* Check if we were called from an interrupt handler. */
+  /* Try to get the pending signal structure from the free list */
 
-  if (up_interrupt_context())
+  sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingsignal);
+  if (!sigpend && up_interrupt_context())
     {
-      /* Try to get the pending signal structure from the free list */
+      /* If no pending signal structure is available in the free list,
+       * then try the special list of structures reserved for
+       * interrupt handlers
+       */
 
-      sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingsignal);
-      if (!sigpend)
-        {
-          /* If no pending signal structure is available in the free list,
-           * then try the special list of structures reserved for
-           * interrupt handlers
-           */
-
-          sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingirqsignal);
-        }
-    }
-
-  /* If we were not called from an interrupt handler, then we are
-   * free to allocate pending action structures if necessary.
-   */
-
-  else
-    {
-      /* Try to get the pending signal structure from the free list */
-
-      flags = enter_critical_section();
-      sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingsignal);
-      leave_critical_section(flags);
-
-      /* Check if we got one. */
-
-      if (!sigpend)
-        {
-          /* No... Allocate the pending signal */
-
-          sigpend = kmm_malloc(sizeof(sigpendq_t));
-
-          /* Check if we got an allocated message */
-
-          if (sigpend)
-            {
-              sigpend->type = SIG_ALLOC_DYN;
-            }
-        }
+      sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingirqsignal);
     }
 
   return sigpend;
@@ -271,13 +230,15 @@ static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
  * Description:
  *   Find a specified element in the pending signal list
  *
+ * Assumptions:
+ *   Called with group->tg_sigpendingq locked
+ *
  ****************************************************************************/
 
 static FAR sigpendq_t *
 nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo)
 {
   FAR sigpendq_t *sigpend = NULL;
-  irqstate_t flags;
 
   DEBUGASSERT(group != NULL);
 
@@ -288,17 +249,12 @@ nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo)
       return sigpend;
     }
 
-  /* Pending signals can be added from interrupt level. */
-
-  flags = enter_critical_section();
-
   /* Search the list for a action pending on this signal */
 
   for (sigpend = (FAR sigpendq_t *)group->tg_sigpendingq.head;
        (sigpend && sigpend->info.si_signo != signo);
        sigpend = sigpend->flink);
 
-  leave_critical_section(flags);
   return sigpend;
 }
 
@@ -329,14 +285,17 @@ static void nxsig_dispatch_kernel_action(FAR struct tcb_s *stcb,
  *   was done intentionally so that a run-away sender cannot consume
  *   all of memory.
  *
+ * Assumptions:
+ *   Called with tg_sigpendingq locked
+ *
  ****************************************************************************/
 
-static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
-                                    FAR siginfo_t *info)
+static FAR sigpendq_t *nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
+                                               FAR siginfo_t *info,
+                                               bool group_dispatch)
 {
   FAR struct task_group_s *group;
   FAR sigpendq_t *sigpend;
-  irqstate_t flags;
 
   DEBUGASSERT(stcb != NULL && stcb->group != NULL);
   group = stcb->group;
@@ -364,16 +323,95 @@ static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 
           memcpy(&sigpend->info, info, sizeof(siginfo_t));
 
+          /* Mark the tcb which need to receive the signal. If any
+           * thread in the group may receive it, set it to NULL
+           */
+
+          sigpend->tcb = group_dispatch ? NULL : stcb;
+
           /* Add the structure to the group pending signal list */
 
-          flags = enter_critical_section();
           sq_addlast((FAR sq_entry_t *)sigpend, &group->tg_sigpendingq);
-          leave_critical_section(flags);
-          nxsig_dispatch_kernel_action(stcb, &sigpend->info);
         }
     }
 
   DEBUGASSERT(sigpend);
+
+  return sigpend;
+}
+
+/****************************************************************************
+ * Name: nxsig_alloc_dyn_pending
+ *
+ * Description:
+ *   Dynamically allocate more pending signal and pending sigaction
+ *   structures, if there are no more left. Note that this leaves the
+ *   the critical section for the allocation. During that time it is
+ *   it is possible that structures are freed, or another signalling thread
+ *   allocates more structures. This is not an issue, any extra pending
+ *   structures are freed after they get used.
+ *
+ * Assumptions:
+ *   Called with g_sigpendingsignal and g_sigpendingaction locked by
+ *   critical section.
+ *
+ ****************************************************************************/
+
+static irqstate_t nxsig_alloc_dyn_pending(irqstate_t flags)
+{
+  if (!up_interrupt_context())
+    {
+      bool alloc_signal = sq_empty(&g_sigpendingsignal);
+      bool alloc_sigact = sq_empty(&g_sigpendingaction);
+
+      /* Signals are not dispatched from the idle task */
+
+      DEBUGASSERT(!sched_idletask());
+
+      if (alloc_signal || alloc_sigact)
+        {
+          FAR sigpendq_t *sigpend = NULL;
+          FAR sigq_t *sigq = NULL;
+
+          /* Leave critical section for the duration of heap operations */
+
+          leave_critical_section(flags);
+
+          /* Allocate more pending signals if there are no more */
+
+          if (alloc_signal)
+            {
+              sigpend = kmm_malloc(sizeof(sigpendq_t));
+            }
+
+          /* Allocate more pending signal actions if there are no more */
+
+          if (alloc_sigact)
+            {
+              sigq = kmm_malloc(sizeof(sigq_t));
+            }
+
+          /* Restore critical section and add the allocated structures to
+           * the free pending queues
+           */
+
+          flags = enter_critical_section();
+
+          if (sigpend)
+            {
+              sigpend->type = SIG_ALLOC_DYN;
+              sq_addfirst((sq_entry_t *)sigpend, &g_sigpendingsignal);
+            }
+
+          if (sigq)
+            {
+              sigq->type = SIG_ALLOC_DYN;
+              sq_addfirst((sq_entry_t *)sigq, &g_sigpendingaction);
+            }
+        }
+    }
+
+  return flags;
 }
 
 /****************************************************************************
@@ -402,12 +440,15 @@ static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
  *
  ****************************************************************************/
 
-int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
+int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info,
+                      bool group_dispatch)
 {
   FAR struct tcb_s *rtcb = this_task();
+  FAR sigactq_t *sigact;
   irqstate_t flags;
   int masked;
   int ret = OK;
+  FAR sigpendq_t *sigpend = NULL;
 
   sinfo("TCB=%p pid=%d signo=%d code=%d value=%d masked=%s\n",
         stcb, stcb->pid, info->si_signo, info->si_code,
@@ -431,6 +472,20 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
     }
 
   /************************** MASKED SIGNAL ACTIONS *************************/
+
+  /* Find if there is a group sigaction associated with this signal */
+
+  sigact = nxsig_find_action(stcb->group, info->si_signo);
+
+  flags = enter_critical_section();
+
+  /* Make sure that there is always at least one sigpednq and sigq structure
+   * available, in case one needs to be queued later. Note that this breaks
+   * the critical section if it needs to allocate any new structures. So it
+   * needs to be done here before using the task state or sigprocmask.
+   */
+
+  flags = nxsig_alloc_dyn_pending(flags);
 
   masked = nxsig_ismember(&stcb->sigprocmask, info->si_signo);
 
@@ -473,7 +528,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
        * signals can be queued from the interrupt level.
        */
 
-      flags = enter_critical_section();
       if (stcb->task_state == TSTATE_WAIT_SIG &&
           (masked == 0 ||
            nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
@@ -484,13 +538,9 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
             }
 
           sigemptyset(&stcb->sigwaitmask);
+          wd_cancel(&stcb->waitdog);
 
-          if (WDOG_ISACTIVE(&stcb->waitdog))
-            {
-              wd_cancel(&stcb->waitdog);
-            }
-
-          /* Remove the task from waitting list */
+          /* Remove the task from waiting list */
 
           dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
 
@@ -500,17 +550,15 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              up_switch_context(this_task(), rtcb);
             }
-
-          leave_critical_section(flags);
 
 #ifdef CONFIG_LIB_SYSCALL
           /* Must also add signal action if in system call */
 
           if (masked == 0)
             {
-              nxsig_add_pendingsignal(stcb, info);
+              sigpend = nxsig_add_pendingsignal(stcb, info, group_dispatch);
             }
 #endif
         }
@@ -521,8 +569,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
       else
         {
-          leave_critical_section(flags);
-          nxsig_add_pendingsignal(stcb, info);
+          sigpend = nxsig_add_pendingsignal(stcb, info, group_dispatch);
         }
     }
 
@@ -532,11 +579,9 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
     {
       /* Queue any sigaction's requested by this task. */
 
-      ret = nxsig_queue_action(stcb, info);
+      ret = nxsig_queue_action(stcb, sigact, info);
 
       /* Deliver of the signal must be performed in a critical section */
-
-      flags = enter_critical_section();
 
       /* Check if the task is waiting for an unmasked signal. If so, then
        * unblock it. This must be performed in a critical section because
@@ -551,13 +596,9 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
             }
 
           sigemptyset(&stcb->sigwaitmask);
+          wd_cancel(&stcb->waitdog);
 
-          if (WDOG_ISACTIVE(&stcb->waitdog))
-            {
-              wd_cancel(&stcb->waitdog);
-            }
-
-          /* Remove the task from waitting list */
+          /* Remove the task from waiting list */
 
           dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
 
@@ -567,11 +608,9 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              up_switch_context(this_task(), rtcb);
             }
         }
-
-      leave_critical_section(flags);
 
       /* If the task neither was waiting for the signal nor had a signal
        * handler attached to the signal, then the default action is
@@ -587,8 +626,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
   if (masked == 0)
     {
-      flags = enter_critical_section();
-
       /* If the task is blocked waiting for a semaphore, then that task must
        * be unblocked when a signal is received.
        */
@@ -621,7 +658,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 #ifdef HAVE_GROUP_MEMBERS
           group_continue(stcb);
 #else
-          /* Remove the task from waitting list */
+          /* Remove the task from waiting list */
 
           dq_rem((FAR dq_entry_t *)stcb, list_stoppedtasks());
 
@@ -631,13 +668,20 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              up_switch_context(this_task(), rtcb);
             }
 #endif
         }
 #endif
+    }
 
-      leave_critical_section(flags);
+  leave_critical_section(flags);
+
+  /* Dispatch kernel action, if needed, in case a pending signal was added */
+
+  if (sigpend != NULL)
+    {
+      nxsig_dispatch_kernel_action(stcb, &sigpend->info);
     }
 
   /* In case nxsig_ismember failed due to an invalid signal number */
@@ -681,70 +725,29 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
 {
 #ifdef HAVE_GROUP_MEMBERS
-  FAR struct tcb_s *stcb;
-  FAR struct task_group_s *group;
-
-  /* Get the TCB associated with the pid */
-
-  stcb = nxsched_get_tcb(pid);
-  if (stcb != NULL)
+  if (!thread)
     {
-      /* The task/thread associated with this PID is still active. Get its
-       * task group.
+      /* Find the group by process PID and call group signal() to send the
+       * signal to the correct group member.
        */
 
-      group = stcb->group;
+      FAR struct task_group_s *group = task_getgroup(pid);
+      if (group != NULL)
+        {
+          return group_signal(group, info);
+        }
     }
   else
+#endif
     {
-      /* The task/thread associated with this PID has exited. In the normal
-       * usage model, the PID should correspond to the PID of the task that
-       * created the task group. Try looking it up.
-       */
+      /* Get the TCB associated with the thread TID */
 
-      group = task_getgroup(pid);
-    }
-
-  /* Did we locate the group? */
-
-  if (group != NULL)
-    {
-      if (thread)
+      FAR struct tcb_s *stcb = nxsched_get_tcb(pid);
+      if (stcb != NULL)
         {
-          /* Before the notification, we should validate the tid and
-           * and make sure that the notified thread is in same process
-           * with the current thread.
-           */
-
-          if (stcb != NULL && group == this_task()->group)
-            {
-              return nxsig_tcbdispatch(stcb, info);
-            }
-        }
-      else
-        {
-          /* Yes.. call group_signal() to send the signal to the correct
-           * group member.
-           */
-
-          return group_signal(group, info);
+          return nxsig_tcbdispatch(stcb, info, false);
         }
     }
 
   return -ESRCH;
-
-#else
-  FAR struct tcb_s *stcb;
-
-  /* Get the TCB associated with the pid */
-
-  stcb = nxsched_get_tcb(pid);
-  if (stcb == NULL)
-    {
-      return -ESRCH;
-    }
-
-  return nxsig_tcbdispatch(stcb, info);
-
-#endif
 }

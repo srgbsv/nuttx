@@ -34,6 +34,18 @@
 #endif
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#ifndef __ASSEMBLY__
+extern rspinlock_t g_segger_lock;
+#endif
+
+#ifdef CONFIG_SEGGER_RTT_UNCACHED_OFF_VARIABLE
+extern ptrdiff_t g_segger_offset;
+#endif
+
+/****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
@@ -45,7 +57,11 @@
 
 /* Address alias where RTT CB and buffers can be accessed uncached */
 
-#define SEGGER_RTT_UNCACHED_OFF         CONFIG_SEGGER_RTT_UNCACHED_OFF
+#ifdef CONFIG_SEGGER_RTT_UNCACHED_OFF_VARIABLE
+#  define SEGGER_RTT_UNCACHED_OFF         g_segger_offset
+#else
+#  define SEGGER_RTT_UNCACHED_OFF         CONFIG_SEGGER_RTT_UNCACHED_OFF
+#endif
 
 /* Number of up-buffers (T->H) available on this target */
 
@@ -81,11 +97,11 @@
 
 /* Lock RTT (nestable)   (i.e. disable interrupts) */
 
-#define SEGGER_RTT_LOCK()               irqstate_t __flags = spin_lock_irqsave(NULL)
+#define SEGGER_RTT_LOCK()               irqstate_t __flags = rspin_lock_irqsave_nopreempt(&g_segger_lock)
 
 /* Unlock RTT (nestable) (i.e. enable previous interrupt lock state) */
 
-#define SEGGER_RTT_UNLOCK()             spin_unlock_irqrestore(NULL, __flags)
+#define SEGGER_RTT_UNLOCK()             rspin_unlock_irqrestore_nopreempt(&g_segger_lock, __flags)
 
 /* Disable RTT SEGGER_RTT_WriteSkipNoLock */
 
@@ -115,5 +131,13 @@
   while (0)
 
 #define SEGGER_SYSVIEW_PRINTF_IMPLICIT_FORMAT 1
+
+/* Segger sysview post-mortem (circular buffer) mode */
+
+#ifdef CONFIG_SEGGER_SYSVIEW_POST_MORTEM
+#  define SEGGER_SYSVIEW_POST_MORTEM_MODE       1
+#else
+#  define SEGGER_SYSVIEW_POST_MORTEM_MODE       0
+#endif
 
 #endif /* __DRIVERS_SEGGER_CONFIG_SEGGER_RTT_CONF_H */

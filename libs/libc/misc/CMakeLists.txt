@@ -47,8 +47,11 @@ list(
   lib_mkdirat.c
   lib_utimensat.c
   lib_mallopt.c
-  lib_getnprocs.c
-  lib_pathbuffer.c)
+  lib_getnprocs.c)
+
+if(CONFIG_LIBC_TEMPBUFFER)
+  list(APPEND SRCS lib_tempbuffer.c)
+endif()
 
 # Support for platforms that do not have long long types
 
@@ -80,6 +83,8 @@ list(
   lib_crc32.c
   lib_crc16.c
   lib_crc16ccitt.c
+  lib_crc16ibm.c
+  lib_crc16xmodem.c
   lib_crc8.c
   lib_crc8ccitt.c
   lib_crc8rohc.c

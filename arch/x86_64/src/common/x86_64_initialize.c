@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/x86_64/src/common/x86_64_initialize.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,10 @@
 
 #ifdef CONFIG_DEV_SIMPLE_ADDRENV
 #  include <nuttx/drivers/addrenv.h>
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+#  include "x86_64_hwdebug.h"
 #endif
 
 #include <arch/acpi.h>
@@ -131,6 +137,12 @@ void up_initialize(void)
     {
       x86_64_dma_initialize();
     }
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+  /* Initialize hardware debug interface */
+
+  x86_64_hwdebug_init();
 #endif
 
   /* Initialize the serial device driver */

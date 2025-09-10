@@ -117,7 +117,7 @@ struct netdev_lowerhalf_s
 
   /* Max # of buffer held by driver */
 
-  atomic_int quota[NETPKT_TYPENUM];
+  atomic_t quota[NETPKT_TYPENUM];
 
   /* The structure used by net stack.
    * Note: Do not change its fields unless you know what you are doing.
@@ -320,8 +320,7 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev);
  *
  ****************************************************************************/
 
-int netdev_lower_quota_load(FAR struct netdev_lowerhalf_s *dev,
-                            enum netpkt_type_e type);
+#define netdev_lower_quota_load(dev, type) atomic_read(&dev->quota[type])
 
 /****************************************************************************
  * Name: netpkt_alloc
@@ -427,7 +426,7 @@ FAR uint8_t *netpkt_getbase(FAR netpkt_t *pkt);
  * Description:
  *   Set the length of data in netpkt, used when data is written into
  *   netpkt by data/base pointer, no need to set this length after
- *   copyin.
+ *   copying.
  *
  * Input Parameters:
  *   dev    - The lower half device driver structure

@@ -157,7 +157,7 @@ static FAR netpkt_t *netpkt_get(FAR struct net_driver_s *dev,
 
   if (atomic_fetch_sub(&upper->lower->quota[type], 1) <= 0)
     {
-      nwarn("WARNING: Allowing temperarily exceeding quota of %s.\n",
+      nwarn("WARNING: Allowing temporarily exceeding quota of %s.\n",
             dev->d_ifname);
     }
 
@@ -754,7 +754,11 @@ static inline void netdev_upper_queue_work(FAR struct net_driver_s *dev)
   FAR struct netdev_upperhalf_s *upper = dev->d_private;
 
 #ifdef CONFIG_NETDEV_WORK_THREAD
+#  ifdef CONFIG_NETDEV_RSS
   int cpu = this_cpu();
+#  else
+  const int cpu = 0;
+#  endif
   int semcount;
 
   if (nxsem_get_value(&upper->sem[cpu], &semcount) == OK &&
@@ -1366,24 +1370,6 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 }
 
 /****************************************************************************
- * Name: netdev_lower_quota_load
- *
- * Description:
- *   Fetch the quota, works like atomic_load.
- *
- * Input Parameters:
- *   dev  - The lower half device driver structure
- *   type - Whether get quota for TX or RX
- *
- ****************************************************************************/
-
-int netdev_lower_quota_load(FAR struct netdev_lowerhalf_s *dev,
-                            enum netpkt_type_e type)
-{
-  return atomic_load(&dev->quota[type]);
-}
-
-/****************************************************************************
  * Name: netpkt_alloc
  *
  * Description:
@@ -1524,7 +1510,7 @@ FAR uint8_t *netpkt_getbase(FAR netpkt_t *pkt)
  * Description:
  *   Set the length of data in netpkt, used when data is written into
  *   netpkt by data/base pointer, no need to set this length after
- *   copyin.
+ *   copying.
  *
  * Input Parameters:
  *   dev    - The lower half device driver structure

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/sim/src/sim/sim_rptun.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -170,7 +172,7 @@ sim_rptun_get_resource(struct rptun_dev_s *dev)
 
       priv->shmem->boots = SIM_RPTUN_STATUS_BOOT;
 
-      /* Wait untils master is ready */
+      /* Wait until master is ready */
 
       while (!(priv->shmem->bootm & SIM_RPTUN_STATUS_OK))
         {

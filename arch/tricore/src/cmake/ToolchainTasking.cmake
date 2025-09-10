@@ -1,5 +1,7 @@
 # ##############################################################################
-# arch/tricore/src/cmake/Toolchain.cmake
+# arch/tricore/src/cmake/ToolchainTasking.cmake
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -81,7 +83,7 @@ add_compile_options(--tradeoff=2)
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(--debug-info=default)
   add_compile_options(--keep-temporary-files)
-  add_link_options(-g)
+  add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()
 
 # merge source code with assembly output
@@ -106,6 +108,7 @@ add_compile_options(--branch-target-align)
 # cmake-format: on
 
 add_compile_options(--fp-model=2)
+add_link_options(--no-default-libraries)
 add_link_options(--fp-model=2)
 add_link_options(-lfp_fpu)
 

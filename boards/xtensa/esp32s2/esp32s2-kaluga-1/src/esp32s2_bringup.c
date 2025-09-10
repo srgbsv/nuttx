@@ -33,9 +33,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
@@ -59,8 +57,8 @@
 #  include "esp32s2_i2c.h"
 #endif
 
-#ifdef CONFIG_ESP32_I2S
-#  include "esp32s2_i2s.h"
+#ifdef CONFIG_ESPRESSIF_I2S
+#  include "espressif/esp_i2s.h"
 #endif
 
 #ifdef CONFIG_ESP32S2_RT_TIMER
@@ -296,7 +294,7 @@ int esp32s2_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32S2_I2S
+#ifdef CONFIG_ESPRESSIF_I2S
 
   /* Configure I2S0 */
 
@@ -316,7 +314,7 @@ int esp32s2_bringup(void)
 
 #endif /* CONFIG_AUDIO_ES8311 */
 
-#endif /* CONFIG_ESP32S2_I2S */
+#endif /* CONFIG_ESPRESSIF_I2S */
 
 #ifdef CONFIG_RTC_DRIVER
   /* Instantiate the ESP32 RTC driver */
