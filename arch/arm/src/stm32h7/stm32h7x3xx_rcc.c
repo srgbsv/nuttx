@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32h7/stm32h7x3xx_rcc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -804,7 +806,7 @@ void stm32_stdclockconfig(void)
       putreg32(regval, STM32_RCC_CFGR);
 #endif
 
-      /* Configure PLL123 clock source and multipiers */
+      /* Configure PLL123 clock source and multipliers */
 
 #ifdef STM32_BOARD_USEHSI
       regval = (RCC_PLLCKSELR_PLLSRC_HSI |

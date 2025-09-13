@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/common/supervisor/riscv_syscall.S
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -60,7 +62,7 @@
  *   Assumes the context to return is already set up
  *
  * Returned Value:
- *   Return value of system call is returned into contex
+ *   Return value of system call is returned into context
  *
  * Assumptions:
  *   Task is running in privileged mode

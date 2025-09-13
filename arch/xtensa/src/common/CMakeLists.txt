@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/xtensa/src/common/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -45,7 +47,7 @@ list(
   APPEND
   SRCS
   xtensa_context.S
-  xtensa_cpuint.S
+  xtensa_cpuint.c
   xtensa_panic.S
   xtensa_assert.c
   xtensa_cache.c
@@ -69,7 +71,6 @@ list(
   xtensa_releasestack.c
   xtensa_registerdump.c
   xtensa_sigdeliver.c
-  xtensa_switchcontext.c
   xtensa_swint.c
   xtensa_stackframe.c
   xtensa_saveusercontext.c

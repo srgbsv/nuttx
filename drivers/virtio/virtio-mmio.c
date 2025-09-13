@@ -32,6 +32,7 @@
 #include <sys/param.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/mm/kasan.h>
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/virtio/virtio-mmio.h>
 
@@ -177,7 +178,7 @@
 
 struct virtio_mmio_device_s
 {
-  struct virtio_device   vdev;       /* Virtio deivce */
+  struct virtio_device   vdev;       /* Virtio device */
   struct metal_io_region shm_io;     /* Share memory io region, virtqueue
                                       * use this io.
                                       */
@@ -330,7 +331,7 @@ static int virtio_mmio_config_virtqueue(FAR struct metal_io_region *io,
 
       if (pfn >> 32)
         {
-          vrterr("Legacy virtio-mmio used RAM shoud not above 0x%llxGB\n",
+          vrterr("Legacy virtio-mmio used RAM should not above 0x%llxGB\n",
                  0x1ull << (2 + VIRITO_PAGE_SHIFT));
         }
 
@@ -342,15 +343,18 @@ static int virtio_mmio_config_virtqueue(FAR struct metal_io_region *io,
     {
       metal_io_write32(io, VIRTIO_MMIO_QUEUE_NUM, vq->vq_nentries);
 
-      addr = (uint64_t)(uintptr_t)vq->vq_ring.desc;
+      addr = (uint64_t)((uintptr_t)
+                        kasan_clear_tag((FAR void *)vq->vq_ring.desc));
       metal_io_write32(io, VIRTIO_MMIO_QUEUE_DESC_LOW, addr);
       metal_io_write32(io, VIRTIO_MMIO_QUEUE_DESC_HIGH, addr >> 32);
 
-      addr = (uint64_t)(uintptr_t)vq->vq_ring.avail;
+      addr = (uint64_t)((uintptr_t)
+                        kasan_clear_tag((FAR void *)vq->vq_ring.avail));
       metal_io_write32(io, VIRTIO_MMIO_QUEUE_AVAIL_LOW, addr);
       metal_io_write32(io, VIRTIO_MMIO_QUEUE_AVAIL_HIGH, addr >> 32);
 
-      addr = (uint64_t)(uintptr_t)vq->vq_ring.used;
+      addr = (uint64_t)((uintptr_t)
+                        kasan_clear_tag((FAR void *)vq->vq_ring.used));
       metal_io_write32(io, VIRTIO_MMIO_QUEUE_USED_LOW, addr);
       metal_io_write32(io, VIRTIO_MMIO_QUEUE_USED_HIGH, addr >> 32);
 
@@ -821,6 +825,12 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
     }
 
   vdev->id.version = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_VERSION);
+  if (vdev->id.version < 1 || vdev->id.version > 2)
+    {
+      vrterr("Version %"PRIu32" not supported!\n", vdev->id.version);
+      return -ENODEV;
+    }
+
   vdev->id.device = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_DEVICE_ID);
   if (vdev->id.device == 0)
     {
@@ -891,7 +901,7 @@ static int virtio_register_mmio_device_(FAR void *regs, int irq, bool secure)
   UNUSED(secure);
 #endif
 
-  /* Attach the intterupt before register the device driver */
+  /* Attach the interrupt before register the device driver */
 
   ret = irq_attach(irq, virtio_mmio_interrupt, vmdev);
   if (ret < 0)

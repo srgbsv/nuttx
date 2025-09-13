@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/armv7-r/gic.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -694,7 +696,7 @@ static inline void arm_cpu_sgi(int sgi, unsigned int cpuset)
        * SMP scenario.
        */
 
-      regval |= GIC_ICDSGIR_NSATT_GRP1;
+      regval |= GIC_ICDSGIR_NSATT;
     }
 
   putreg32(regval, GIC_ICDSGIR);
@@ -811,7 +813,7 @@ int arm_start_handler(int irq, void *context, void *arg);
  *
  *   1. It saves the current task state at the head of the current assigned
  *      task list.
- *   2. It porcess g_delivertasks
+ *   2. It processes g_delivertasks
  *   3. Returns from interrupt, restoring the state of the new task at the
  *      head of the ready to run list.
  *

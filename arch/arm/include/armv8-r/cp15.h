@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/include/armv8-r/cp15.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -170,10 +172,13 @@
 #define CP15_DCIALLU(r)       _CP15(0, r, c15, c5, 0)     /* Invalidate data cache */
 
 #define CP15_ICC_PMR(r)       _CP15(0, r, c4,  c6,  0)    /* ICC_PMR */
+#define CP15_ICC_IAR0(r)      _CP15(0, r, c12, c8,  0)    /* ICC_IAR0 */
 #define CP15_ICC_IAR1(r)      _CP15(0, r, c12, c12, 0)    /* ICC_IAR1 */
+#define CP15_ICC_EOIR0(r)     _CP15(0, r, c12, c8,  1)    /* ICC_EOIR0 */
 #define CP15_ICC_EOIR1(r)     _CP15(0, r, c12, c12, 1)    /* ICC_EOIR1 */
 #define CP15_ICC_SRE(r)       _CP15(0, r, c12, c12, 5)    /* ICC_SRE */
 #define CP15_ICC_HSRE(r)      _CP15(4, r, c12,  c9, 5)    /* ICC_HSRE */
+#define CP15_ICC_IGRPEN0(r)   _CP15(0, r, c12, c12, 6)    /* ICC_IGRPEN0 */
 #define CP15_ICC_IGRPEN1(r)   _CP15(0, r, c12, c12, 7)    /* ICC_IGRPEN1 */
 #define CP15_ICC_SGI1R(lo,hi) _CP15_64(0, lo, hi, c12)    /* ICC_SGI1R */
 
@@ -231,5 +236,46 @@
      );                                 \
      _value;                             \
   })                                    \
+
+#define CP15_MODIFY(v,m,a) CP15_SET(a, ((CP15_GET(a) & ~(m)) | ((uintptr_t)(v) & (m))))
+
+/* MPIDR_EL1, Multiprocessor Affinity Register */
+
+#define MPIDR_AFFLVL_MASK   (0xff)
+#define MPIDR_ID_MASK       (0x00ffffff)
+
+#define MPIDR_AFF0_SHIFT    (0)
+#define MPIDR_AFF1_SHIFT    (8)
+#define MPIDR_AFF2_SHIFT    (16)
+
+/* mpidr register, the register is define:
+ *   - bit 0~7:   Aff0
+ *   - bit 8~15:  Aff1
+ *   - bit 16~23: Aff2
+ *   - bit 24:    MT, multithreading
+ *   - bit 25~29: RES0
+ *   - bit 30:    U, multiprocessor/Uniprocessor
+ *   - bit 31:    RES1
+ *  Different ARM/ARM64 cores will use different Affn define, the mpidr
+ *  value is not CPU number, So we need to change CPU number to mpid
+ *  and vice versa
+ */
+
+#define GET_MPIDR()             CP15_GET(MPIDR)
+
+#define MPIDR_AFFLVL(mpidr, aff_level) \
+  (((mpidr) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
+
+#define MPID_TO_CORE(mpid, aff_level) \
+  (((mpid) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
+
+#define CORE_TO_MPID(core, aff_level) \
+  ({ \
+    uint64_t __mpidr = GET_MPIDR(); \
+    __mpidr &= ~(MPIDR_AFFLVL_MASK << MPIDR_AFF ## aff_level ## _SHIFT); \
+    __mpidr |= (core << MPIDR_AFF ## aff_level ## _SHIFT); \
+    __mpidr &= MPIDR_ID_MASK; \
+    __mpidr; \
+  })
 
 #endif /* __ARCH_ARM_SRC_ARMV8_R_CP15_H */

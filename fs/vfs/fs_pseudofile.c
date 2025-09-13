@@ -40,8 +40,8 @@
 #include <nuttx/lib/math32.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 #include "fs_heap.h"
+#include "vfs.h"
 
 /****************************************************************************
  * Private Types
@@ -354,7 +354,7 @@ static int pseudofile_munmap(FAR struct task_group_s *group,
    */
 
   if (inode->i_parent == NULL &&
-      atomic_load(&inode->i_crefs) <= 1)
+      atomic_read(&inode->i_crefs) <= 1)
     {
       /* Delete the inode metadata */
 
@@ -493,6 +493,7 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
   (*node)->i_flags = 1;
   (*node)->u.i_ops = &g_pseudofile_ops;
   (*node)->i_private = pf;
+  atomic_fetch_add(&(*node)->i_crefs, 1);
 
   inode_unlock();
 #ifdef CONFIG_FS_NOTIFY

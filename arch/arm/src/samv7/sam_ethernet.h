@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/samv7/sam_ethernet.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -198,7 +200,7 @@ int sam_emac_initialize(int intf);
  *      netdev ioctl.  The application level code have gotten the MAC
  *      address from some configuration parameter or by accessing some
  *      non-volatile storage containing the address.  This is the
- *      "cannonically correct" way to set the MAC address.
+ *      "canonically correct" way to set the MAC address.
  *   2) Alterntively, the board logic may support some other less obvious
  *      non-volatile storage and the board-level boot-up code may access
  *      this and use this interface to set the Ethernet MAC address more

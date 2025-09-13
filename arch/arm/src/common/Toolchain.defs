@@ -1,6 +1,8 @@
 ############################################################################
 # arch/arm/src/common/Toolchain.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -61,7 +63,7 @@ else
 endif
 
 ifeq ($(CONFIG_STACK_CANARIES),y)
-  ARCHOPTIMIZATION += -fstack-protector-all
+  ARCHOPTIMIZATION += $(patsubst "%",%,$(CONFIG_STACK_CANARIES_LEVEL))
 endif
 
 ifeq ($(CONFIG_STACK_USAGE),y)
@@ -92,20 +94,30 @@ ifeq ($(CONFIG_MM_UBSAN_TRAP_ON_ERROR),y)
   ARCHOPTIMIZATION += -fsanitize-undefined-trap-on-error
 endif
 
-ifeq ($(CONFIG_MM_KASAN_ALL),y)
+ifeq ($(CONFIG_MM_KASAN_INSTRUMENT_ALL),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
-endif
+  KASAN_PARAM += asan-stack=0
+  KASAN_PARAM += asan-instrumentation-with-call-threshold=0
 
-ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
-  ARCHOPTIMIZATION += --param asan-globals=1
-endif
+  ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
+    KASAN_PARAM += asan-globals=1
+  else
+    KASAN_PARAM += asan-globals=0
+  endif
 
-ifeq ($(CONFIG_MM_KASAN_DISABLE_READS_CHECK),y)
-  ARCHOPTIMIZATION += --param asan-instrument-reads=0
-endif
+  ifeq ($(CONFIG_MM_KASAN_DISABLE_READS_CHECK),y)
+    KASAN_PARAM += asan-instrument-reads=0
+  endif
 
-ifeq ($(CONFIG_MM_KASAN_DISABLE_WRITES_CHECK),y)
-  ARCHOPTIMIZATION += --param asan-instrument-writes=0
+  ifeq ($(CONFIG_MM_KASAN_DISABLE_WRITES_CHECK),y)
+    KASAN_PARAM += asan-instrument-writes=0
+  endif
+
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_CLANG),y)
+    ARCHOPTIMIZATION += $(addprefix -mllvm ,$(KASAN_PARAM))
+  else
+    ARCHOPTIMIZATION += $(addprefix --param ,$(KASAN_PARAM))
+  endif
 endif
 
 # Instrumentation options
@@ -202,6 +214,7 @@ ifeq ($(CONFIG_ARM_TOOLCHAIN_CLANG),y)
   LD      = ld.lld -m armelf
   STRIP   = llvm-strip --strip-unneeded
   AR      = llvm-ar rcs
+  UNAR    = llvm-ar x
   NM      = llvm-nm
   OBJCOPY = llvm-objcopy
   OBJDUMP = llvm-objdump
@@ -245,6 +258,7 @@ else ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
   LD      = armlink
   STRIP   = llvm-strip --strip-unneeded
   AR      = armar -rcs
+  UNAR    = armar -x
   NM      = llvm-nm
   OBJCOPY = llvm-objcopy
   OBJDUMP = llvm-objdump
@@ -302,15 +316,17 @@ else
   LD      = $(CROSSDEV)ld
   STRIP   = $(CROSSDEV)strip --strip-unneeded
   AR      = $(CROSSDEV)ar rcs
+  UNAR    = $(CROSSDEV)ar x
   NM      = $(CROSSDEV)nm
   OBJCOPY = $(CROSSDEV)objcopy
   OBJDUMP = $(CROSSDEV)objdump
 
   ifeq ($(CONFIG_LTO_FULL),y)
     ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
-      LD := $(CROSSDEV)gcc
-      AR := $(CROSSDEV)gcc-ar rcs
-      NM := $(CROSSDEV)gcc-nm
+      LD   := $(CROSSDEV)gcc
+      AR   := $(CROSSDEV)gcc-ar rcs
+      UNAR := $(CROSSDEV)gcc-ar x
+      NM   := $(CROSSDEV)gcc-nm
       ARCHOPTIMIZATION += -fno-builtin
     endif
   endif
@@ -529,12 +545,12 @@ endif
 # Loadable module definitions
 
 CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden -mlong-calls # --target1-abs
-LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
+LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/elf/gnu-elf.ld)
 
 # ELF module definitions
 
 CELFFLAGS = $(CFLAGS) -fvisibility=hidden -mlong-calls # --target1-abs
-CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden
+CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden -mlong-calls
 
 ifeq ($(CONFIG_PIC),y)
   CFLAGS += --fixed-r10
@@ -544,10 +560,19 @@ ifeq ($(CONFIG_PIC),y)
   # Generate an executable elf, need to ignore undefined symbols
   LDELFFLAGS += --unresolved-symbols=ignore-in-object-files --emit-relocs
 else
-  LDELFFLAGS += -r
+  ifneq ($(CONFIG_BINFMT_ELF_EXECUTABLE),y)
+    LDELFFLAGS += -r
+  endif
 endif
 
-LDELFFLAGS +=  -e main -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)modlib$(DELIM)gnu-elf.ld)
+ifneq ($(CONFIG_BUILD_KERNEL),y)
+  # Flat build and protected elf entry point use crt0,
+  # Kernel build will use apps/import/scripts/crt0
+
+  LDELFFLAGS += $(TOPDIR)$(DELIM)arch$(DELIM)arm$(DELIM)src$(DELIM)crt0.o
+endif
+
+LDELFFLAGS += -e __start -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)elf$(DELIM)gnu-elf.ld)
 
 # Zig toolchain
 
@@ -572,8 +597,4 @@ SHLDFLAGS = -shared -Bsymbolic -Bdynamic -G
 
 ifeq ($(CONFIG_SIM_M32),y)
   SHLDFLAGS += -melf_i386
-endif
-
-ifeq ($(CONFIG_LIBC_ARCH_ATOMIC),y)
-  ARCHCFLAGS += -D__STDC_NO_ATOMICS__
 endif

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/avr/src/avr/avr_schedulesigaction.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -124,6 +126,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 #if defined(REG_PC2)
           tcb->xcp.saved_pc2  = up_current_regs()[REG_PC2];
 #endif
+#if defined(REG_RAMPZ)
+          tcb->xcp.saved_rampz = up_current_regs()[REG_RAMPZ];
+#endif
           tcb->xcp.saved_sreg = up_current_regs()[REG_SREG];
 
           /* Then set up to vector to the trampoline with interrupts
@@ -165,6 +170,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
       tcb->xcp.saved_pc1     = tcb->xcp.regs[REG_PC1];
 #if defined(REG_PC2)
       tcb->xcp.saved_pc2     = tcb->xcp.regs[REG_PC2];
+#endif
+#if defined(REG_RAMPZ)
+      tcb->xcp.saved_rampz   = tcb->xcp.regs[REG_RAMPZ];
 #endif
       tcb->xcp.saved_sreg    = tcb->xcp.regs[REG_SREG];
 

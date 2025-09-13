@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_pio.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -868,7 +870,7 @@ static inline void rp23xx_pio_sm_clkdiv_restart(uint32_t pio, uint32_t sm)
  *   machines and wish to resynchronise them), and that disabling a state
  *   machine does not halt its clock divider: that is, if multiple state
  *   machines have their clocks synchronised, you can safely disable and
- *   reenable one of the state machines without losing synchronisation.
+ *   re-enable one of the state machines without losing synchronisation.
  *
  * Input Parameters:
  *   pio - PIO index (0..2)

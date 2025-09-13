@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_fatal.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,7 +46,6 @@
 #include "arm64_internal.h"
 #include "arm64_fatal.h"
 #include "arm64_mmu.h"
-#include "arm64_fatal.h"
 #include "arm64_arch_timer.h"
 
 #ifdef CONFIG_ARCH_FPU
@@ -52,7 +53,7 @@
 #endif
 
 /****************************************************************************
- * Private Type Declarations
+ * Private Types
  ****************************************************************************/
 
 struct fatal_handle_info
@@ -547,7 +548,7 @@ static int arm64_exception_handler(uint64_t *regs)
  * Public Functions
  ****************************************************************************/
 
-void arm64_fatal_handler(uint64_t *regs)
+uint64_t *arm64_fatal_handler(uint64_t *regs)
 {
   struct tcb_s *tcb = this_task();
   int ret;
@@ -574,6 +575,8 @@ void arm64_fatal_handler(uint64_t *regs)
   /* Clear irq flag */
 
   write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
+
+  return regs;
 }
 
 void arm64_register_debug_hook(int nr, fatal_handle_func_t fn)

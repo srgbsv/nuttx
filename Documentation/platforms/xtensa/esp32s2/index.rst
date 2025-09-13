@@ -13,6 +13,7 @@ ESP32-S2 Toolchain
 ==================
 
 The toolchain used to build ESP32-S2 firmware can be either downloaded or built from the sources.
+
 It is **highly** recommended to use (download or build) the same toolchain version that is being
 used by the NuttX CI.
 
@@ -26,20 +27,12 @@ check for the current compiler version being used. For instance:
   # Build image for tool required by ESP32 builds
   ###############################################################################
   FROM nuttx-toolchain-base AS nuttx-toolchain-esp32
-  # Download the latest ESP32 GCC toolchain prebuilt by Espressif
-  RUN mkdir -p xtensa-esp32-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xJ
+  # Download the latest ESP32, ESP32-S2 and ESP32-S3 GCC toolchain prebuilt by Espressif
+  RUN mkdir -p xtensa-esp-elf-gcc && \
+    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-14.2.0_20241119/xtensa-esp-elf-14.2.0_20241119-x86_64-linux-gnu.tar.xz" \
+    | tar -C xtensa-esp-elf-gcc --strip-components 1 -xJ
 
-  RUN mkdir -p xtensa-esp32s2-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s2-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xJ
-
-  RUN mkdir -p xtensa-esp32s3-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s3-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32s3-elf-gcc --strip-components 1 -xJ
-
-For ESP32-S2, the toolchain version is based on GGC 12.2.0 (``xtensa-esp32s2-elf-12.2.0_20230208``)
+For ESP32-S2, the toolchain version is based on GGC 14.2.0 (``xtensa-esp-elf-14.2.0_20241119``)
 
 The prebuilt Toolchain (Recommended)
 ------------------------------------
@@ -48,20 +41,20 @@ First, create a directory to hold the toolchain:
 
 .. code-block:: console
 
-  $ mkdir -p /path/to/your/toolchain/xtensa-esp32s2-elf-gcc
+  $ mkdir -p /path/to/your/toolchain/xtensa-esp-elf-gcc
 
 Download and extract toolchain:
 
 .. code-block:: console
 
-  $ curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s2-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-  | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xJ
+  $ curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-14.2.0_20241119/xtensa-esp-elf-14.2.0_20241119-x86_64-linux-gnu.tar.xz" \
+  | tar -C xtensa-esp-elf-gcc --strip-components 1 -xJ
 
 Add the toolchain to your `PATH`:
 
 .. code-block:: console
 
-  $ echo "export PATH=/path/to/your/toolchain/xtensa-esp32s2-elf-gcc/bin:$PATH" >> ~/.bashrc
+  $ echo "export PATH=/path/to/your/toolchain/xtensa-esp-elf-gcc/bin:$PATH" >> ~/.bashrc
 
 You can edit your shell's rc files if you don't use bash.
 
@@ -92,6 +85,22 @@ These steps are given in the setup guide in
 Building and flashing NuttX
 ===========================
 
+Installing esptool
+------------------
+
+First, make sure that ``esptool.py`` is installed and up-to-date.
+This tool is used to convert the ELF to a compatible ESP32-S2 image and to flash the image into the board.
+
+It can be installed with: ``pip install esptool>=4.8.1``.
+
+.. warning::
+    Installing ``esptool.py`` may required a Python virtual environment on newer systems.
+    This will be the case if the ``pip install`` command throws an error such as:
+    ``error: externally-managed-environment``.
+
+    If you are not familiar with virtual environments, refer to `Managing esptool on virtual environment`_ for instructions on how to install ``esptool.py``.
+
+
 Bootloader and partitions
 -------------------------
 
@@ -120,20 +129,64 @@ Simple Boot is used, for instance)::
 Building and Flashing
 ---------------------
 
-First, make sure that ``esptool.py`` is installed.  This tool is used to convert the ELF to a
-compatible ESP32-S2 image and to flash the image into the board.
-It can be installed with: ``pip install esptool==4.8.dev4``.
-
-It's a two-step process where the first converts the ELF file into an ESP32-S2 compatible binary
-and the second flashes it to the board. These steps are included in the build system and it is
+This is a two-step process where the first step converts the ELF file into an ESP32-S2 compatible binary
+and the second step flashes it to the board. These steps are included in the build system and it is
 possible to build and flash the NuttX firmware simply by running::
 
     $ make flash ESPTOOL_PORT=<port> ESPTOOL_BINDIR=./
 
-where ``<port>`` is typically ``/dev/ttyUSB0`` or similar. ``ESPTOOL_BINDIR=./`` is the path of the
-externally-built 2nd stage bootloader and the partition table (if applicable): when built using the
-``make bootloader``, these files are placed into ``nuttx`` folder. ``ESPTOOL_BAUD`` is able to
-change the flash baud rate if desired.
+where:
+
+* ``ESPTOOL_PORT`` is typically ``/dev/ttyUSB0`` or similar.
+* ``ESPTOOL_BINDIR=./`` is the path of the externally-built 2nd stage bootloader and the partition table (if applicable): when built using the ``make bootloader``, these files are placed into ``nuttx`` folder.
+* ``ESPTOOL_BAUD`` is able to change the flash baud rate if desired.
+
+Flashing NSH Example
+--------------------
+
+This example shows how to build and flash the ``nsh`` defconfig for the ESP32-S2-Saola-1 board::
+
+    $ cd nuttx
+    $ make distclean
+    $ ./tools/configure.sh esp32s2-saola-1:nsh
+    $ make -j$(nproc)
+
+When the build is complete, the firmware can be flashed to the board using the command::
+
+    $ make -j$(nproc) flash ESPTOOL_PORT=<port> ESPTOOL_BINDIR=./
+
+where ``<port>`` is the serial port where the board is connected::
+
+  $ make flash ESPTOOL_PORT=/dev/ttyUSB0 ESPTOOL_BINDIR=./
+  CP: nuttx.hex
+  MKIMAGE: ESP32-S2 binary
+  esptool.py -c esp32s2 elf2image --ram-only-header -fs 4MB -fm dio -ff 40m -o nuttx.bin nuttx
+  esptool.py v4.8.1
+  Creating esp32s2 image...
+  Image has only RAM segments visible. ROM segments are hidden and SHA256 digest is not appended.
+  Merged 1 ELF section
+  Successfully created esp32s2 image.
+  Generated: nuttx.bin
+  esptool.py -c esp32s2 -p /dev/ttyUSB0 -b 921600   write_flash -fs detect -fm dio -ff 40m 0x1000 nuttx.bin
+  esptool.py v4.8.1
+  Serial port /dev/ttyUSB0
+  Connecting....
+  Chip is ESP32-S2 (revision v0.0)
+  [...]
+  Flash will be erased from 0x00001000 to 0x00032fff...
+  Compressed 202280 bytes to 71796...
+  Wrote 202280 bytes (71796 compressed) at 0x00001000 in 2.3 seconds (effective 698.5 kbit/s)...
+  Hash of data verified.
+
+  Leaving...
+  Hard resetting via RTS pin...
+
+Now opening the serial port with a terminal emulator should show the NuttX console::
+
+  $ picocom -b 115200 /dev/ttyUSB0
+  NuttShell (NSH) NuttX-12.8.0
+  nsh> uname -a
+  NuttX 12.8.0 759d37b97c-dirty Mar  5 2025 20:26:00 xtensa esp32s2-saola-1
 
 Debugging
 =========
@@ -171,7 +224,13 @@ directly to the ESP32-S2 JTAG pins.
 
 OpenOCD can then be used::
 
-  openocd -c 'set ESP_RTOS hwthread; set ESP_FLASH_SIZE 0' -f board/esp32s2-kaluga-1.cfg
+  openocd -s <tcl_scripts_path> -c 'set ESP_RTOS hwthread' -f board/esp32s2-kaluga-1.cfg -c 'init; reset halt; esp appimage_offset 0x1000'
+
+.. note::
+  - ``appimage_offset`` should be set to ``0x1000`` when ``Simple Boot`` is used. For MCUboot, this value should be set to
+    ``CONFIG_ESPRESSIF_OTA_PRIMARY_SLOT_OFFSET`` value (``0x10000`` by default).
+  - ``-s <tcl_scripts_path>`` defines the path to the OpenOCD scripts. Usually set to `tcl` if running openocd from its source directory.
+    It can be omitted if `openocd-esp32` were installed in the system with `sudo make install`.
 
 Once OpenOCD is running, you can use GDB to connect to it and debug your application::
 
@@ -316,30 +375,32 @@ The following list indicates the state of peripherals' support in NuttX:
 ========== ======= =====
 Peripheral Support NOTES
 ========== ======= =====
-ADC          No
+ADC          Yes   Oneshot
 AES          No
 CAN/TWAI     Yes
+DAC          No
 DMA          Yes
-eFuse        No
-Ethernet     No
-GPIO         Yes
-I2C          Yes
+eFuse        Yes
+GPIO         Yes    Dedicated GPIO supported
+I2C          Yes    Master and Slave mode supported
 I2S          Yes
-LED_PWM      No
-Pulse_CNT    No
-RMT          No
+LED/PWM      Yes
+Pulse_CNT    Yes
+RMT          Yes
 RNG          Yes
 RSA          No
 RTC          Yes
-SHA          No
+SD/MMC       Yes    SPI based SD card driver
+SHA          Yes
 SPI          Yes
 SPIFLASH     Yes
 SPIRAM       Yes
 Timers       Yes
 Touch        Yes
 UART         Yes
+USB OTG      No
 Watchdog     Yes
-Wifi         Yes
+Wi-Fi        Yes
 ========== ======= =====
 
 Memory Map
@@ -486,6 +547,40 @@ audio subsystem and develop specific usages of the I2S peripheral.
 
 Please check for usage examples using the :doc:`ESP32-S2-Saola-1 </platforms/xtensa/esp32s2/boards/esp32s2-saola-1/index>`.
 
+Analog-to-digital converter (ADC)
+=================================
+
+Two ADC units are available for the ESP32-S2, each with 10 channels.
+
+Those units are independent and can be used simultaneously. During bringup, GPIOs for selected channels are
+configured automatically to be used as ADC inputs.
+If available, ADC calibration is automatically applied (see
+`this page <https://docs.espressif.com/projects/esp-idf/en/v5.1/esp32s2/api-reference/peripherals/adc_calibration.html>`__ for more details).
+Otherwise, a simple conversion is applied based on the attenuation and resolution.
+
+Each ADC unit is accessible using the ADC character driver, which returns data for the enabled channels.
+
+The ADC unit can be enabled in the menu :menuselection:`System Type --> ESP32-S2 Peripheral Selection --> Analog-to-digital converter (ADC)`.
+
+Then, it can be customized in the menu :menuselection:`System Type --> ADC Configuration`, which includes operating mode, gain and channels.
+
+========== =========== ===========
+ Channel    ADC1 GPIO   ADC2 GPIO
+========== =========== ===========
+0           1           11
+1           2           12
+2           3           13
+3           4           14
+4           5           15
+5           6           16
+6           7           17
+7           8           18
+8           9           19
+9           10          20
+========== =========== ===========
+
+.. warning:: Minimum and maximum measurable voltages may saturate around 100 mV and 3000 mV, respectively.
+
 Wi-Fi
 ======
 
@@ -530,11 +625,100 @@ using WPA2.
 
 The ``dhcpd_start`` is necessary to let your board to associate an IP to your smartphone.
 
+.. _MCUBoot and OTA Update S2:
+
+MCUBoot and OTA Update
+======================
+
+The ESP32-S2 supports over-the-air (OTA) updates using MCUBoot.
+
+Read more about the MCUBoot for Espressif devices `here <https://docs.mcuboot.com/readme-espressif.html>`__.
+
+Executing OTA Update
+--------------------
+
+This section describes how to execute OTA update using MCUBoot.
+
+1. First build the default ``mcuboot_update_agent`` config. This image defaults to the primary slot and already comes with Wi-Fi settings enabled::
+
+    ./tools/configure.sh esp32s2-saola-1:mcuboot_update_agent
+
+2. Build the MCUBoot bootloader::
+
+    make bootloader
+
+3. Finally, build the application image::
+
+    make
+
+Flash the image to the board and verify it boots ok.
+It should show the message "This is MCUBoot Update Agent image" before NuttShell is ready.
+
+At this point, the board should be able to connect to Wi-Fi so we can download a new binary from our network::
+
+  NuttShell (NSH) NuttX-12.4.0
+  This is MCUBoot Update Agent image
+  nsh>
+  nsh> wapi psk wlan0 <wifi_ssid> 3
+  nsh> wapi essid wlan0 <wifi_password> 1
+  nsh> renew wlan0
+
+Now, keep the board as is and execute the following commands to **change the MCUBoot target slot to the 2nd slot**
+and modify the message of the day (MOTD) as a mean to verify the new image is being used.
+
+1. Change the MCUBoot target slot to the 2nd slot::
+
+    kconfig-tweak -d CONFIG_ESPRESSIF_ESPTOOL_TARGET_PRIMARY
+    kconfig-tweak -e CONFIG_ESPRESSIF_ESPTOOL_TARGET_SECONDARY
+    kconfig-tweak --set-str CONFIG_NSH_MOTD_STRING "This is MCUBoot UPDATED image!"
+    make olddefconfig
+
+  .. note::
+    The same changes can be accomplished through ``menuconfig`` in :menuselection:`System Type --> Bootloader and Image Configuration --> Target slot for image flashing`
+    for MCUBoot target slot and in :menuselection:`System Type --> Bootloader and Image Configuration --> Search (motd) --> NSH Library --> Message of the Day` for the MOTD.
+
+2. Rebuild the application image::
+
+    make
+
+At this point the board is already connected to Wi-Fi and has the primary image flashed.
+The new image configured for the 2nd slot is ready to be downloaded.
+
+To execute OTA, create a simple HTTP server on the NuttX directory so we can access the binary remotely::
+
+  cd nuttxspace/nuttx
+  python3 -m http.server
+   Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
+
+On the board, execute the update agent, setting the IP address to the one on the host machine. Wait until image is transferred and the board should reboot automatically::
+
+  nsh> mcuboot_agent http://10.42.0.1:8000/nuttx.bin
+  MCUboot Update Agent example
+  Downloading from http://10.42.0.1:8000/nuttx.bin
+  Firmware Update size: 1048576 bytes
+  Received: 512      of 1048576 bytes [0%]
+  Received: 1024     of 1048576 bytes [0%]
+  Received: 1536     of 1048576 bytes [0%]
+  [.....]
+  Received: 1048576  of 1048576 bytes [100%]
+  Application Image successfully downloaded!
+  Requested update for next boot. Restarting...
+
+NuttShell should now show the new MOTD, meaning the new image is being used::
+
+  NuttShell (NSH) NuttX-12.4.0
+  This is MCUBoot UPDATED image!
+  nsh>
+
+Finally, the image is loaded but not confirmed.
+To make sure it won't rollback to the previous image, you must confirm with ``mcuboot_confirm`` and reboot the board.
+The OTA is now complete.
+
 Secure Boot and Flash Encryption
-================================
+--------------------------------
 
 Secure Boot
------------
+^^^^^^^^^^^
 
 Secure Boot protects a device from running any unauthorized (i.e., unsigned) code by checking that
 each piece of software that is being booted is signed. On an ESP32-S2, these pieces of software include
@@ -562,7 +746,7 @@ The Secure Boot process on the ESP32-S2 involves the following steps performed:
    by MCUboot rather than the original NuttX port.
 
 Flash Encryption
-----------------
+^^^^^^^^^^^^^^^^
 
 Flash encryption is intended for encrypting the contents of the ESP32-S2's off-chip flash memory. Once this feature is enabled,
 firmware is flashed as plaintext, and then the data is encrypted in place on the first boot. As a result, physical readout
@@ -574,7 +758,7 @@ of flash will not be sufficient to recover most flash contents.
    `here <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/security/flash-encryption.html>`__.
 
 Prerequisites
--------------
+^^^^^^^^^^^^^
 
 First of all, we need to install ``imgtool`` (a MCUboot utility application to manipulate binary
 images) and ``esptool`` (the ESP32-S2 toolkit)::
@@ -598,7 +782,7 @@ respectively, of the compiled project::
 .. important:: The contents of the key files must be stored securely and kept secret.
 
 Enabling Secure Boot and Flash Encryption
------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To enable Secure Boot for the current project, go to the project's NuttX directory, execute ``make menuconfig`` and the following steps:
 
@@ -636,6 +820,71 @@ to ``Application image secondary slot``.
    :menuselection:`System Type --> Application Image Configuration --> UART ROM download mode`
    and change usage mode to ``Release`` in `System Type --> Application Image Configuration --> Enable usage mode`.
    **After disabling UART Download Mode you will not be able to flash other images through UART.**
+
+_`Managing esptool on virtual environment`
+==========================================
+
+This section describes how to install ``esptool``, ``imgtool`` or any other Python packages in a
+proper environment.
+
+Normally, a Linux-based OS would already have Python 3 installed by default. Up to a few years ago,
+you could simply call ``pip install`` to install packages globally. However, this is no longer recommended
+as it can lead to conflicts between packages and versions. The recommended way to install Python packages
+is to use a virtual environment.
+
+A virtual environment is a self-contained directory that contains a Python installation for a particular
+version of Python, plus a number of additional packages. You can create a virtual environment for each
+project you are working on, and install the required packages in that environment.
+
+Two alternatives are explained below, you can select any one of those.
+
+Using pipx (recommended)
+------------------------
+
+``pipx`` is a tool that makes it easy to install Python packages in a virtual environment. To install
+``pipx``, you can run the following command (using apt as example)::
+
+    $ apt install pipx
+
+Once you have installed ``pipx``, you can use it to install Python packages in a virtual environment. For
+example, to install the ``esptool`` package, you can run the following command::
+
+    $ pipx install esptool
+
+This will create a new virtual environment in the ``~/.local/pipx/venvs`` directory, which contains the
+``esptool`` package. You can now use the ``esptool`` command as normal, and so will the build system.
+
+Make sure to run ``pipx ensurepath`` to add the ``~/.local/bin`` directory to your ``PATH``. This will
+allow you to run the ``esptool`` command from any directory.
+
+Using venv (alternative)
+------------------------
+To create a virtual environment, you can use the ``venv`` module, which is included in the Python standard
+library. To create a virtual environment, you can run the following command::
+
+    $ python3 -m venv myenv
+
+This will create a new directory called ``myenv`` in the current directory, which contains a Python
+installation and a copy of the Python standard library. To activate the virtual environment, you can run
+the following command::
+
+    $ source myenv/bin/activate
+
+This will change your shell prompt to indicate that you are now working in the virtual environment. You can
+now install packages using ``pip``. For example, to install the ``esptool`` package, you can run the following
+command::
+
+    $ pip install esptool
+
+This will install the ``esptool`` package in the virtual environment. You can now use the ``esptool`` command as
+normal. When you are finished working in the virtual environment, you can deactivate it by running the following
+command::
+
+    $ deactivate
+
+This will return your shell prompt to its normal state. You can reactivate the virtual environment at any time by
+running the ``source myenv/bin/activate`` command again. You can also delete the virtual environment by deleting
+the directory that contains it.
 
 Supported Boards
 ================

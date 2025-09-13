@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32h5/hardware/stm32h5xxx_memorymap.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,7 +46,9 @@
 /* Code Base Addresses ******************************************************/
 
 #define STM32_BOOT_BASE      0x00000000     /* 0x00000000-0x000fffff: Aliased boot memory */
-#define STM32_FLASH_BASE     0x08000000     /* 0x08000000-0x0807ffff: FLASH memory */
+#define STM32_FLASH_BANK1    0x08000000     /* 0x08000000-0x080fffff: Bank 1 (562/563/573xx devices) */
+#define STM32_FLASH_BANK2    0x08100000     /* 0x08100000-0x081fffff: Bank 2 (562/563/573xx devices) */
+#define STM32_FLASH_BASE     STM32_FLASH_BANK1
 #define STM32_SRAM1_BASE     0x20000000     /* 0x20000000-0x2002ffff: 192k SRAM1 */
 #define STM32_SRAM2_BASE     0x20040000     /* 0x20040000-0x2004ffff:  64k SRAM2 */
 #define STM32_SRAM3_BASE     0x20050000     /* 0x20050000-0x2008ffff: 320k SRAM3 */
@@ -52,6 +56,7 @@
 
 /* System Memory Addresses **************************************************/
 
+#define STM32_SYSMEM_MEM     0x0bf80000
 #define STM32_SYSMEM_UID     0x08FFF800     /* The 96-bit unique device identifier */
 #define STM32_SYSMEM_FSIZE   0x08FFF80C     /* Size of Flash memory in Kbytes. */
 #define STM32_SYSMEM_PACKAGE 0x08FFF80E     /* Indicates the device's package type. */
@@ -124,9 +129,9 @@
 
 #define STM32_MPC_WM_BKPRAM_BASE 0x40036400
 #define STM32_GTZC1_BASE         0x40032400
-#define STM32_DCACHE_BASE        0x40030400
-#define STM32_ICACHE_BASE        0x40031400
-#define STM32_EMAC_BASE          0x40030400
+#define STM32_DCACHE_BASE        0x40031400
+#define STM32_ICACHE_BASE        0x40030400
+#define STM32_EMAC_BASE          0x40028000
 #define STM32_RAMCFG_BASE        0x40026000
 #define STM32_FMAC_BASE          0x40023c00
 #define STM32_CORDIC_BASE        0x40023800

@@ -39,7 +39,6 @@
 #include <nuttx/signal.h>
 #include <nuttx/page.h>
 #include <nuttx/clock.h>
-#include <nuttx/signal.h>
 
 #include "sched/sched.h"
 #include "paging/paging.h"
@@ -298,7 +297,7 @@ static inline bool pg_dequeue(void)
 
           if (nxsched_add_readytorun(g_pftcb))
             {
-              up_switch_context(g_pftcb, wtcb);
+              up_switch_context(this_task(), wtcb);
             }
         }
     }
@@ -495,7 +494,7 @@ static inline void pg_fillcomplete(void)
 
   if (nxsched_add_readytorun(g_pftcb))
     {
-      up_switch_context(g_pftcb, wtcb);
+      up_switch_context(this_task(), wtcb);
     }
 }
 
@@ -598,7 +597,7 @@ int pg_worker(int argc, FAR char *argv[])
 
               if (nxsched_add_readytorun(g_pftcb))
                 {
-                  up_switch_context(g_pftcb, wtcb);
+                  up_switch_context(this_task(), wtcb);
                 }
 
               /* Yes .. Start the next asynchronous fill.  Check the return
@@ -683,7 +682,7 @@ int pg_worker(int argc, FAR char *argv[])
 
           if (nxsched_add_readytorun(g_pftcb))
             {
-              up_switch_context(g_pftcb, wtcb);
+              up_switch_context(this_task(), wtcb);
             }
         }
 

@@ -242,6 +242,8 @@
 #define SOL_SCO         17 /* See options in include/netpacket/bluetooth.h */
 #define SOL_RFCOMM      18 /* See options in include/netpacket/bluetooth.h */
 
+#define SOL_PACKET      19
+
 /* Protocol-level socket options may begin with this value */
 
 #define __SO_PROTOCOL  16
@@ -321,7 +323,7 @@
  * the fields of those structures without alignment problems.
  */
 
-struct sockaddr_storage
+struct aligned_data(SS_ALIGNSIZE) sockaddr_storage
 {
   sa_family_t ss_family;       /* Address family */
 

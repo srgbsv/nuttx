@@ -1928,17 +1928,9 @@ void up_timer_initialize(void);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SCHED_TICKLESS) && !defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT)
 int up_timer_gettime(FAR struct timespec *ts);
-#endif
-
-#if defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT) || defined(CONFIG_CLOCK_TIMEKEEPING)
 int up_timer_gettick(FAR clock_t *ticks);
-#endif
-
-#ifdef CONFIG_CLOCK_TIMEKEEPING
 void up_timer_getmask(FAR clock_t *mask);
-#endif
 
 /****************************************************************************
  * Name: up_alarm_cancel
@@ -2120,7 +2112,9 @@ int up_timer_tick_start(clock_t ticks);
  *
  ****************************************************************************/
 
-uintptr_t up_getusrsp(FAR void *regs);
+/* static inline_function uintptr_t up_getusrsp(void *regs);
+ * The actual implementation should be provided in irq.h per arch.
+ */
 
 /****************************************************************************
  * TLS support
@@ -2827,6 +2821,18 @@ int arch_phy_irq(FAR const char *intf, xcpt_t handler, void *arg,
 void up_putc(int ch);
 
 /****************************************************************************
+ * Name: up_lowputc
+ *
+ * Description:
+ *   Output one character in early boot-stages.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_LOWPUTC
+void up_lowputc(int ch);
+#endif
+
+/****************************************************************************
  * Name: up_puts
  *
  * Description:
@@ -3060,6 +3066,65 @@ int up_connect_irq(FAR const int *irq, int num,
 int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin);
 
 #endif
+
+#ifdef CONFIG_ARCH_HAVE_SYSCALL
+
+/****************************************************************************
+ * Name: up_assert
+ ****************************************************************************/
+
+void up_assert(FAR const char *filename, int linenum, FAR const char *msg);
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_MEMTAG
+
+/****************************************************************************
+ * Name: up_memtag_bypass
+ *
+ * Description:
+ *   Set MTE state bypass or not
+ *
+ ****************************************************************************/
+
+bool up_memtag_bypass(bool bypass);
+
+/****************************************************************************
+ * Name: up_memtag_get_tag
+ ****************************************************************************/
+
+uint8_t up_memtag_get_tag(const void *addr);
+
+/****************************************************************************
+ * Name: up_memtag_get_random_tag
+ *
+ * Description:
+ *   Get a random label based on the address through the mte register
+ *
+ ****************************************************************************/
+
+uint8_t up_memtag_get_random_tag(const void *addr);
+
+/****************************************************************************
+ * Name: up_memtag_set_tag
+ *
+ * Description:
+ *   Get the address with label
+ *
+ ****************************************************************************/
+
+void *up_memtag_set_tag(const void *addr, uint8_t tag);
+
+/****************************************************************************
+ * Name: up_memtag_tag_mem
+ *
+ * Description:
+ *   Set memory tags for a given memory range
+ *
+ ****************************************************************************/
+
+void up_memtag_tag_mem(const void *addr, size_t size);
+
+#endif /* CONFIG_ARCH_HAVE_MEMTAG */
 
 #undef EXTERN
 #if defined(__cplusplus)

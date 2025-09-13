@@ -33,11 +33,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
-
-#include <syslog.h>
 #include <errno.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
@@ -68,11 +64,11 @@
 #  include "esp32_board_spiflash.h"
 #endif
 
-#ifdef CONFIG_ESP32_BLE
+#ifdef CONFIG_ESPRESSIF_BLE
 #  include "esp32_ble.h"
 #endif
 
-#ifdef CONFIG_ESP32_WIFI
+#ifdef CONFIG_ESPRESSIF_WLAN
 #  include "esp32_board_wlan.h"
 #endif
 
@@ -80,8 +76,8 @@
 #  include "esp32_board_i2c.h"
 #endif
 
-#ifdef CONFIG_ESP32_I2S
-#  include "esp32_i2s.h"
+#ifdef CONFIG_ESPRESSIF_I2S
+#  include "espressif/esp_i2s.h"
 #endif
 
 #ifdef CONFIG_SENSORS_BMP180
@@ -101,7 +97,6 @@
 #endif
 
 #ifdef CONFIG_LCD_DEV
-#  include <nuttx/board.h>
 #  include <nuttx/lcd/lcd_dev.h>
 #endif
 
@@ -111,6 +106,10 @@
 
 #ifdef CONFIG_LCD_BACKPACK
 #  include "esp32_lcd_backpack.h"
+#endif
+
+#ifdef CONFIG_MMCSD_SPI
+#  include "esp32_board_sdmmc.h"
 #endif
 
 #include "esp32-audio-kit.h"
@@ -177,8 +176,8 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_MMCSD
-  ret = esp32_mmcsd_initialize(0);
+#ifdef CONFIG_MMCSD_SPI
+  ret = board_sdmmc_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize SD slot: %d\n", ret);
@@ -210,7 +209,7 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_BLE
+#ifdef CONFIG_ESPRESSIF_BLE
   ret = esp32_ble_initialize();
   if (ret)
     {
@@ -218,11 +217,11 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_WIFI
+#ifdef CONFIG_ESPRESSIF_WLAN
   ret = board_wlan_init();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to initialize wireless subsystem=%d\n",
+      syslog(LOG_ERR, "ERROR: Failed to initialize wlan subsystem=%d\n",
              ret);
     }
 #endif
@@ -339,9 +338,9 @@ int esp32_bringup(void)
 
 #endif
 
-#ifdef CONFIG_ESP32_I2S
+#ifdef CONFIG_ESPRESSIF_I2S
 
-#ifdef CONFIG_ESP32_I2S0
+#ifdef CONFIG_ESPRESSIF_I2S0
 
   /* Configure I2S0 */
 
@@ -366,13 +365,13 @@ int esp32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize I2S%d driver: %d\n",
-             CONFIG_ESP32_I2S0, ret);
+             CONFIG_ESPRESSIF_I2S0, ret);
     }
 #endif /* CONFIG_AUDIO_ES8388 */
 
-#endif /* CONFIG_ESP32_I2S0 */
+#endif /* CONFIG_ESPRESSIF_I2S0 */
 
-#ifdef CONFIG_ESP32_I2S1
+#ifdef CONFIG_ESPRESSIF_I2S1
 
   /* Configure I2S generic audio on I2S1 */
 
@@ -380,12 +379,12 @@ int esp32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize I2S%d driver: %d\n",
-             CONFIG_ESP32_I2S0, ret);
+             CONFIG_ESPRESSIF_I2S0, ret);
     }
 
-#endif /* CONFIG_ESP32_I2S1 */
+#endif /* CONFIG_ESPRESSIF_I2S1 */
 
-#endif /* CONFIG_ESP32_I2S */
+#endif /* CONFIG_ESPRESSIF_I2S */
 
 #ifdef CONFIG_SENSORS_BMP180
   /* Try to register BMP180 device in I2C0 */
@@ -449,4 +448,3 @@ int esp32_bringup(void)
   UNUSED(ret);
   return OK;
 }
-

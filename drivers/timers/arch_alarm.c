@@ -110,7 +110,7 @@ static void oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
 #else
   /* Start the next tick first, in order to minimize latency. Ideally
    * the ONESHOT_TICK_START would also return the current tick so that
-   * the retriving the current tick and starting the new one could be done
+   * the retrieving the current tick and starting the new one could be done
    * atomically w. respect to a HW timer
    */
 
@@ -187,14 +187,13 @@ void up_alarm_set_lowerhalf(FAR struct oneshot_lowerhalf_s *lower)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_CLOCK_TIMEKEEPING
 void weak_function up_timer_getmask(FAR clock_t *mask)
 {
   *mask = 0;
 
   if (g_oneshot_lower != NULL)
     {
-      clock_t maxticks;
+      clock_t maxticks = 0;
 
       ONESHOT_TICK_MAX_DELAY(g_oneshot_lower, &maxticks);
 
@@ -210,9 +209,7 @@ void weak_function up_timer_getmask(FAR clock_t *mask)
         }
     }
 }
-#endif
 
-#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_CLOCK_TIMEKEEPING)
 int weak_function up_timer_gettick(FAR clock_t *ticks)
 {
   int ret = -EAGAIN;
@@ -236,7 +233,6 @@ int weak_function up_timer_gettime(struct timespec *ts)
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: up_alarm_cancel
@@ -355,7 +351,7 @@ int weak_function up_alarm_tick_start(clock_t ticks)
  *   units.
  ****************************************************************************/
 
-#ifndef CONFIG_ARCH_PERF_EVENTS
+#ifndef CONFIG_ARCH_HAVE_PERF_EVENTS
 void up_perf_init(FAR void *arg)
 {
   UNUSED(arg);

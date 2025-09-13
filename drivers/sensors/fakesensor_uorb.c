@@ -30,6 +30,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
@@ -196,6 +197,20 @@ static inline void fakesensor_read_gyro(FAR struct fakesensor_s *sensor,
                     sizeof(struct sensor_gyro));
 }
 
+static inline void fakesensor_read_baro(FAR struct fakesensor_s *sensor,
+                                        uint64_t event_timestamp)
+{
+  struct sensor_baro baro;
+  char raw[50];
+
+  fakesensor_read_csv_line(&sensor->data, raw, sizeof(raw),
+                           sensor->raw_start);
+  sscanf(raw, "%f,%f\n", &baro.pressure, &baro.temperature);
+  baro.timestamp = event_timestamp;
+  sensor->lower.push_event(sensor->lower.priv, &baro,
+                           sizeof(struct sensor_baro));
+}
+
 static inline void fakesensor_read_gnss(FAR struct fakesensor_s *sensor)
 {
   char raw[150];
@@ -292,6 +307,10 @@ void fakesensor_push_event(FAR struct fakesensor_s *sensor,
 
     case SENSOR_TYPE_GYROSCOPE:
       fakesensor_read_gyro(sensor, event_timestamp);
+      break;
+
+    case SENSOR_TYPE_BAROMETER:
+      fakesensor_read_baro(sensor, event_timestamp);
       break;
 
     case SENSOR_TYPE_GNSS:
@@ -401,6 +420,14 @@ int fakesensor_init(int type, FAR const char *file_name,
   FAR struct fakesensor_s *sensor;
   FAR char *argv[2];
   char arg1[32];
+  uint32_t nbuffer[] = {
+    [SENSOR_GNSS_IDX_GNSS] = batch_number,
+    [SENSOR_GNSS_IDX_GNSS_SATELLITE] = batch_number,
+    [SENSOR_GNSS_IDX_GNSS_MEASUREMENT] = batch_number,
+    [SENSOR_GNSS_IDX_GNSS_CLOCK] = batch_number,
+    [SENSOR_GNSS_IDX_GNSS_GEOFENCE] = batch_number,
+  };
+
   int ret;
 
   /* Alloc memory for sensor */
@@ -436,7 +463,7 @@ int fakesensor_init(int type, FAR const char *file_name,
   if (type == SENSOR_TYPE_GNSS || type == SENSOR_TYPE_GNSS_SATELLITE)
     {
       sensor->gnss.ops = &g_fakegnss_ops;
-      gnss_register(&sensor->gnss, devno, batch_number);
+      gnss_register(&sensor->gnss, devno, nbuffer, nitems(nbuffer));
     }
   else
     {

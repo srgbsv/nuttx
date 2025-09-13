@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp23xx/rp23xx_ws2812.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,7 +28,6 @@
 
 #include <stdlib.h>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <nuttx/kmalloc.h>
@@ -38,7 +39,7 @@
 #ifdef CONFIG_WS2812
 
 /****************************************************************************
- * Private Type Definitions
+ * Private Types
  ****************************************************************************/
 
 struct instance

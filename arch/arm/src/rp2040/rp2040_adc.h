@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp2040/rp2040_adc.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -66,7 +68,7 @@ extern "C"
 #ifdef CONFIG_ADC
 
 /****************************************************************************
- * Name: rp2040_adc_setup
+ * Name: rp2040_adc_initialize
  *
  * Description:
  *   Initialize and register the ADC driver.
@@ -83,12 +85,12 @@ extern "C"
  *   OK on success or an ERROR on failure
  ****************************************************************************/
 
-int rp2040_adc_setup(const char *path,
-                     bool        read_adc0,
-                     bool        read_adc1,
-                     bool        read_adc2,
-                     bool        read_adc3,
-                     bool        read_temp);
+int rp2040_adc_initialize(const char *path,
+                          bool        read_adc0,
+                          bool        read_adc1,
+                          bool        read_adc2,
+                          bool        read_adc3,
+                          bool        read_temp);
 
 #else /* CONFIG_ADC */
 

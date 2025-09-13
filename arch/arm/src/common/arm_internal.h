@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/common/arm_internal.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,8 @@
 #  include <sys/types.h>
 #  include <stdint.h>
 #  include <syscall.h>
+
+#  include "chip.h"
 #endif
 
 /****************************************************************************
@@ -147,10 +151,7 @@
 /* Context switching */
 
 #ifndef arm_fullcontextrestore
-#  define arm_fullcontextrestore(restoreregs) \
-    sys_call1(SYS_restore_context, (uintptr_t)restoreregs);
-#else
-extern void arm_fullcontextrestore(uint32_t *restoreregs);
+#  define arm_fullcontextrestore() sys_call0(SYS_restore_context)
 #endif
 
 /* Redefine the linker symbols as armlink style */
@@ -171,50 +172,15 @@ extern void arm_fullcontextrestore(uint32_t *restoreregs);
 #  define _enoinit Image$$noinit$$Limit
 #endif
 
-/* MPIDR_EL1, Multiprocessor Affinity Register */
-
-#define MPIDR_AFFLVL_MASK   (0xff)
-#define MPIDR_ID_MASK       (0x00ffffff)
-
-#define MPIDR_AFF0_SHIFT    (0)
-#define MPIDR_AFF1_SHIFT    (8)
-#define MPIDR_AFF2_SHIFT    (16)
-
-/* mpidr register, the register is define:
- *   - bit 0~7:   Aff0
- *   - bit 8~15:  Aff1
- *   - bit 16~23: Aff2
- *   - bit 24:    MT, multithreading
- *   - bit 25~29: RES0
- *   - bit 30:    U, multiprocessor/Uniprocessor
- *   - bit 31:    RES1
- *  Different ARM/ARM64 cores will use different Affn define, the mpidr
- *  value is not CPU number, So we need to change CPU number to mpid
- *  and vice versa
- */
-
-#define GET_MPIDR()             CP15_GET(MPIDR)
-
-#define MPIDR_AFFLVL(mpidr, aff_level) \
-  (((mpidr) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
-
-#define MPID_TO_CORE(mpid, aff_level) \
-  (((mpid) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
-
-#define CORE_TO_MPID(core, aff_level) \
-  ({ \
-    uint64_t __mpidr = GET_MPIDR(); \
-    __mpidr &= ~(MPIDR_AFFLVL_MASK << MPIDR_AFF ## aff_level ## _SHIFT); \
-    __mpidr |= (core << MPIDR_AFF ## aff_level ## _SHIFT); \
-    __mpidr &= MPIDR_ID_MASK; \
-    __mpidr; \
-  })
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
+/* g_interrupt_context store irq status */
+
+extern volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
+
 typedef void (*up_vector_t)(void);
 #endif
 
@@ -366,8 +332,6 @@ EXTERN const void * const _vectors[];
 
 int  arm_svcall(int irq, void *context, void *arg);
 int  arm_hardfault(int irq, void *context, void *arg);
-int  arm_enable_dbgmonitor(void);
-int  arm_dbgmonitor(int irq, void *context, void *arg);
 
 #  if defined(CONFIG_ARCH_ARMV7M) || defined(CONFIG_ARCH_ARMV8M)
 
@@ -527,6 +491,11 @@ void arm_stack_check_init(void) noinstrument_function;
 
 #ifdef CONFIG_ARM_COREDUMP_REGION
   void arm_coredump_add_region(void);
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+int arm_enable_dbgmonitor(void);
+int arm_dbgmonitor(int irq, void *context, void *arg);
 #endif
 
 #undef EXTERN

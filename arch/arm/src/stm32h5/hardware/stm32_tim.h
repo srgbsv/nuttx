@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32H5_HARDWARE_STM32_TIM_H 
-#define __ARCH_ARM_SRC_STM32H5_HARDWARE_STM32_TIM_H 
+#ifndef __ARCH_ARM_SRC_STM32H5_HARDWARE_STM32_TIM_H
+#define __ARCH_ARM_SRC_STM32H5_HARDWARE_STM32_TIM_H
 
 /****************************************************************************
  * Included Files
@@ -363,6 +363,26 @@
 #define STM32_TIM16_DCR          (STM32_TIM16_BASE+STM32_GTIM_DCR_OFFSET)
 #define STM32_TIM16_DMAR         (STM32_TIM16_BASE+STM32_GTIM_DMAR_OFFSET)
 
+#define STM32_TIM17_CR1          (STM32_TIM17_BASE+STM32_GTIM_CR1_OFFSET)
+#define STM32_TIM17_CR2          (STM32_TIM17_BASE+STM32_GTIM_CR2_OFFSET)
+#define STM32_TIM17_DIER         (STM32_TIM17_BASE+STM32_GTIM_DIER_OFFSET)
+#define STM32_TIM17_SR           (STM32_TIM17_BASE+STM32_GTIM_SR_OFFSET)
+#define STM32_TIM17_EGR          (STM32_TIM17_BASE+STM32_GTIM_EGR_OFFSET)
+#define STM32_TIM17_CCMR1        (STM32_TIM17_BASE+STM32_GTIM_CCMR1_OFFSET)
+#define STM32_TIM17_CCER         (STM32_TIM17_BASE+STM32_GTIM_CCER_OFFSET)
+#define STM32_TIM17_CNT          (STM32_TIM17_BASE+STM32_GTIM_CNT_OFFSET)
+#define STM32_TIM17_PSC          (STM32_TIM17_BASE+STM32_GTIM_PSC_OFFSET)
+#define STM32_TIM17_ARR          (STM32_TIM17_BASE+STM32_GTIM_ARR_OFFSET)
+#define STM32_TIM17_RCR          (STM32_TIM17_BASE+STM32_GTIM_RCR_OFFSET)
+#define STM32_TIM17_CCR1         (STM32_TIM17_BASE+STM32_GTIM_CCR1_OFFSET)
+#define STM32_TIM17_BDTR         (STM32_TIM17_BASE+STM32_GTIM_BDTR_OFFSET)
+#define STM32_TIM17_DTR2         (STM32_TIM17_BASE+STM32_GTIM_DTR2_OFFSET)
+#define STM32_TIM17_TISEL        (STM32_TIM17_BASE+STM32_GTIM_TISEL_OFFSET)
+#define STM32_TIM17_AF1          (STM32_TIM17_BASE+STM32_GTIM_AF1_OFFSET)
+#define STM32_TIM17_AF2          (STM32_TIM17_BASE+STM32_GTIM_AF2_OFFSET)
+#define STM32_TIM17_DCR          (STM32_TIM17_BASE+STM32_GTIM_DCR_OFFSET)
+#define STM32_TIM17_DMAR         (STM32_TIM17_BASE+STM32_GTIM_DMAR_OFFSET)
+
 /* Register Bitfield Definitions ********************************************/
 
 /* Basic Timers - TIM6 and TIM7 */
@@ -456,7 +476,7 @@
 #define ATIM_CR2_OIS3N            (1 << 13) /* Bit 13: Output Idle state 3 (OC3N output) */
 #define ATIM_CR2_OIS4             (1 << 14) /* Bit 14: Output idle state 4 (OC4 output) */
 #define ATIM_CR2_OIS4N            (1 << 15) /* Bit 15: Output idle state 4 (OC4N output) */
-#define ATIM_CR2_OIS5             (1 << 16) /* Bit 16: OOutput Idle state 5 (OC5 output) */
+#define ATIM_CR2_OIS5             (1 << 16) /* Bit 16: Output Idle state 5 (OC5 output) */
 #define ATIM_CR2_OIS6             (1 << 18) /* Bit 18: Output Idle state 6 (OC6 output) */
 #define ATIM_CR2_MMS2_SHIFT       (20)      /* Bits 20-23: Master Mode Selection 2 */
 #define ATIM_CR2_MMS2_MASK        (15 << ATIM_CR2_MMS2_SHIFT)
@@ -502,7 +522,7 @@
 #  define ATIM_SMCR_TI1FP1        (5 << ATIM_SMCR_TS_SHIFT)  /* 101: Filtered Timer Input 1 (TI1FP1) */
 #  define ATIM_SMCR_T12FP2        (6 << ATIM_SMCR_TS_SHIFT)  /* 110: Filtered Timer Input 2 (TI2FP2) */
 #  define ATIM_SMCR_ETRF          (7 << ATIM_SMCR_TS_SHIFT)  /* 111: External Trigger input (ETRF) */
-#define ATIM_SMCR_TS43_SHIFT      (20)    
+#define ATIM_SMCR_TS43_SHIFT      (20)
 #define ATIM_SMCR_TS43_MASK       (3 << ATIM_SMCR_TS43_SHIFT) /* Trigger selection bits 4:3. */
 
 #define ATIM_SMCR_MSM             (1 << 7)  /* Bit 7: Master/slave mode */
@@ -764,6 +784,12 @@
 #define ATIM_CCER_CC4E            (1 << 12)   /* Bit 12: Capture/Compare 4 output enable */
 #define ATIM_CCER_CC4P            (1 << 13)   /* Bit 13: Capture/Compare 4 output Polarity */
 #define ATIM_CCER_CC4NE           (1 << 14)   /* Bit 14: Capture/compare 4 Complementary output enable */
+#define ATIM_CCER_CC4NP           (1 << 15)   /* Bit 15: Capture/Compare 4 Complementary output polarity */
+#define ATIM_CCER_CC5E            (1 << 16)   /* Bit 16: Capture/Compare 5 output enable */
+#define ATIM_CCER_CC5P            (1 << 17)   /* Bit 17: Capture/Compare 5 output Polarity */
+#define ATIM_CCER_CC6E            (1 << 20)   /* Bit 20: Capture/Compare 6 output enable */
+#define ATIM_CCER_CC6P            (1 << 21)   /* Bit 21: Capture/Compare 6 output Polarity */
+
 #define ATIM_CCER_CCXBASE(ch)     ((ch) << 2) /* Each channel uses 4-bits */
 
 /* Counter Register */

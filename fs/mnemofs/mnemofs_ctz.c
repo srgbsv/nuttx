@@ -99,7 +99,7 @@
 #include <debug.h>
 #include <fcntl.h>
 #include <nuttx/kmalloc.h>
-#include <math.h> 
+#include <math.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 
@@ -176,7 +176,7 @@ static mfs_t ctz_idx_nptrs(const mfs_t idx)
  * Input Parameters:
  *   sb    - Superblock instance of the device.
  *   off   - Offset of the data stored in the CTZ list.
- *   idx   - Indes of the CTZ block, to be populated.
+ *   idx   - Index of the CTZ block, to be populated.
  *   pgoff - Offset inside the CTZ block, to be populated.
  *
  ****************************************************************************/

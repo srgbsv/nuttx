@@ -41,6 +41,10 @@
 #include "esp_board_i2c.h"
 #include "esp_board_bmp180.h"
 
+#ifdef CONFIG_ESPRESSIF_ADC
+#  include "esp_board_adc.h"
+#endif
+
 #ifdef CONFIG_WATCHDOG
 #  include "espressif/esp_wdt.h"
 #endif
@@ -65,8 +69,16 @@
 #  include <nuttx/input/buttons.h>
 #endif
 
+#ifdef CONFIG_ESPRESSIF_EFUSE
+#  include "espressif/esp_efuse.h"
+#endif
+
 #ifdef CONFIG_ESP_RMT
 #  include "esp_board_rmt.h"
+#endif
+
+#ifdef CONFIG_ESPRESSIF_I2S
+#  include "esp_board_i2s.h"
 #endif
 
 #ifdef CONFIG_ESPRESSIF_SPI
@@ -89,8 +101,7 @@
 #  include "esp_board_wlan.h"
 #endif
 
-#ifdef CONFIG_SPI_SLAVE_DRIVER
-#  include "espressif/esp_spi.h"
+#ifdef CONFIG_SPI_SLAVE
 #  include "esp_board_spislavedev.h"
 #endif
 
@@ -98,8 +109,32 @@
 #  include "esp_board_mcpwm.h"
 #endif
 
-#ifdef CONFIG_ESP_PCNT_AS_QE
-#  include "esp_board_qencoder.h"
+#ifdef CONFIG_ESP_PCNT
+#  include "esp_board_pcnt.h"
+#endif
+
+#ifdef CONFIG_SENSORS_MPU60X0
+#  include "esp_board_mpu60x0.h"
+#endif
+
+#ifdef CONFIG_SYSTEM_NXDIAG_ESPRESSIF_CHIP_WO_TOOL
+#  include "espressif/esp_nxdiag.h"
+#endif
+
+#ifdef CONFIG_ESP_SDM
+#  include "espressif/esp_sdm.h"
+#endif
+
+#ifdef CONFIG_ESPRESSIF_SHA_ACCELERATOR
+#  include "espressif/esp_sha.h"
+#endif
+
+#ifdef CONFIG_MMCSD_SPI
+#  include "esp_board_mmcsd.h"
+#endif
+
+#ifdef CONFIG_ESPRESSIF_USE_LP_CORE
+#  include "espressif/esp_ulp.h"
 #endif
 
 #include "esp32c6-devkitc.h"
@@ -154,6 +189,24 @@ int esp_bringup(void)
   if (ret < 0)
     {
       _err("Failed to mount tmpfs at %s: %d\n", CONFIG_LIBC_TMPDIR, ret);
+    }
+#endif
+
+#if defined(CONFIG_ESPRESSIF_EFUSE)
+  ret = esp_efuse_initialize("/dev/efuse");
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init EFUSE: %d\n", ret);
+    }
+#endif
+
+#if defined(CONFIG_ESPRESSIF_SHA_ACCELERATOR) && \
+    !defined(CONFIG_CRYPTO_CRYPTODEV_HARDWARE)
+  ret = esp_sha_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to initialize SHA: %d\n", ret);
     }
 #endif
 
@@ -229,7 +282,7 @@ int esp_bringup(void)
     }
 #endif
 
-#if defined(CONFIG_ESPRESSIF_SPI) && defined(CONFIG_SPI_DRIVER)
+#ifdef CONFIG_ESPRESSIF_SPI
 #  ifdef CONFIG_ESPRESSIF_SPI2
   ret = board_spidev_initialize(ESPRESSIF_SPI2);
   if (ret < 0)
@@ -245,7 +298,15 @@ int esp_bringup(void)
       syslog(LOG_ERR, "ERROR: Failed to init spidev 3: %d\n", ret);
     }
 #  endif /* CONFIG_ESPRESSIF_SPI_BITBANG */
-#endif /* CONFIG_ESPRESSIF_SPI && CONFIG_SPI_DRIVER*/
+#endif /* CONFIG_ESPRESSIF_SPI */
+
+#if defined(CONFIG_ESPRESSIF_SPI) && defined(CONFIG_MMCSD_SPI)
+  ret = esp_mmcsd_spi_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: failed to init MMCSD SPI\n");
+    }
+#endif
 
 #ifdef CONFIG_ESPRESSIF_SPIFLASH
   ret = board_spiflash_init();
@@ -255,7 +316,17 @@ int esp_bringup(void)
     }
 #endif
 
-#if defined(CONFIG_I2C_DRIVER)
+#if defined(CONFIG_ESPRESSIF_I2S)
+  /* Configure I2S peripheral interfaces */
+
+  ret = board_i2s_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize I2S driver: %d\n", ret);
+    }
+#endif
+
+#if defined(CONFIG_I2C)
   /* Configure I2C peripheral interfaces */
 
   ret = board_i2c_init();
@@ -275,6 +346,35 @@ int esp_bringup(void)
     {
       syslog(LOG_ERR, "Failed to initialize BMP180 "
              "Driver for I2C0: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_SENSORS_MPU60X0
+  /* Try to register MPU60x0 device in I2C0 */
+
+  ret = board_mpu60x0_initialize(0);
+
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize MPU60x0 "
+             "Driver for I2C0: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP_SDM
+  struct esp_sdm_chan_config_s config =
+  {
+    .gpio_num = 5,
+    .sample_rate_hz = 1000 * 1000,
+    .flags = 0,
+  };
+
+  struct dac_dev_s *dev = esp_sdminitialize(config);
+  ret = dac_register("/dev/dac0", dev);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize DAC driver: %d\n",
+             ret);
     }
 #endif
 
@@ -324,7 +424,7 @@ int esp_bringup(void)
     }
 #endif
 
-#if defined(CONFIG_SPI_SLAVE_DRIVER) && defined(CONFIG_ESPRESSIF_SPI2)
+#if defined(CONFIG_SPI_SLAVE) && defined(CONFIG_ESPRESSIF_SPI2)
   ret = board_spislavedev_initialize(ESPRESSIF_SPI2);
   if (ret < 0)
     {
@@ -375,14 +475,41 @@ int esp_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SENSORS_QENCODER
-  /* Initialize and register the qencoder driver */
+#ifdef CONFIG_ESP_PCNT
+  /* Initialize and register the pcnt/qencoder driver */
 
-  ret = board_qencoder_initialize();
+  ret = board_pcnt_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: board_qencoder_initialize failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: board_pcnt_initialize failed: %d\n", ret);
     }
+#endif
+
+#ifdef CONFIG_SYSTEM_NXDIAG_ESPRESSIF_CHIP_WO_TOOL
+  ret = esp_nxdiag_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: esp_nxdiag_initialize failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESPRESSIF_ADC
+  /* Initialize and register the pcnt/qencoder driver */
+
+  ret = board_adc_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_adc_init failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESPRESSIF_USE_LP_CORE
+
+  /* ULP initialization should be the handled later than
+   * peripherals to use supported peripherals properly on ULP core
+   */
+
+  esp_ulp_init();
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but

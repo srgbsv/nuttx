@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/x86_64/src/cmake/Toolchain.cmake
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -60,7 +62,7 @@ if(CONFIG_FRAME_POINTER)
 endif()
 
 if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
+  add_compile_options(${CONFIG_STACK_CANARIES_LEVEL})
 else()
   add_compile_options(-fno-stack-protector)
 endif()
@@ -119,6 +121,11 @@ add_compile_options(
   -Wno-attributes
   -Wno-unknown-pragmas
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
+
+# LLVM target definitions
+set(LLVM_ARCH "x86_64")
+set(LLVM_CPU "x86-64")
+set(LLVM_ABI "sysv")
 
 if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)

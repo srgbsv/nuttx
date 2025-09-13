@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/arm/src/stm32/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -80,6 +82,9 @@ if(CONFIG_STM32_HAVE_IP_I2C_V1)
   endif()
 elseif(CONFIG_STM32_HAVE_IP_I2C_V2)
   list(APPEND SRCS stm32_i2c_v2.c)
+  if(CONFIG_STM32_I2C_SLAVE)
+    list(APPEND SRCS stm32_i2cslave_v2.c)
+  endif()
 endif()
 
 if(CONFIG_USBDEV)

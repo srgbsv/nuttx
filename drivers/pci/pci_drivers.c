@@ -32,6 +32,10 @@
 #include <nuttx/virtio/virtio-pci.h>
 #include <nuttx/net/e1000.h>
 #include <nuttx/net/igc.h>
+#include <nuttx/net/igb.h>
+#include <nuttx/can/kvaser_pci.h>
+#include <nuttx/can/ctucanfd_pci.h>
+#include <nuttx/usb/xhci_pci.h>
 
 #include "pci_drivers.h"
 
@@ -159,6 +163,52 @@ int pci_register_drivers(void)
       pcierr("pci_igc_init failed, ret=%d\n", ret);
     }
 #endif
+
+  /* Initialization igb driver */
+
+#ifdef CONFIG_NET_IGB
+  ret = pci_igb_init();
+  if (ret < 0)
+    {
+      pcierr("pci_igb_init failed, ret=%d\n", ret);
+    }
+#endif
+
+  /* Initialzie Kvaser pci driver */
+
+#ifdef CONFIG_CAN_KVASER
+  ret = pci_kvaser_init();
+  if (ret < 0)
+    {
+      pcierr("pci_kvaser_init failed, ret=%d\n", ret);
+    }
+#endif
+
+  /* Initialzie CTU CAN FD pci driver */
+
+#ifdef CONFIG_CAN_CTUCANFD
+  ret = pci_ctucanfd_init();
+  if (ret < 0)
+    {
+      pcierr("pci_ctucanfd_init failed, ret=%d\n", ret);
+    }
+#endif
+
+  /* Initialization xHCI pci driver */
+
+#ifdef CONFIG_USBHOST_XHCI_PCI
+  ret = pci_xhci_init();
+  if (ret < 0)
+    {
+      pcierr("pci_xhci_init failed, ret=%d\n", ret);
+    }
+#endif
+
+  ret = pci_dev_register();
+  if (ret < 0)
+    {
+      pcierr("pci_dev_register failed, ret=%d\n", ret);
+    }
 
   UNUSED(ret);
   return ret;

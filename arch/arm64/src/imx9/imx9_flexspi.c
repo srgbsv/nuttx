@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/imx9/imx9_flexspi.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -41,8 +43,9 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 
+#include <arch/barriers.h>
+
 #include "arm64_internal.h"
-#include "barriers.h"
 
 #include "imx9_gpio.h"
 #include "imx9_ccm.h"
@@ -269,7 +272,7 @@ struct flexspi_config_s
     bool enable_ahb_bufferable;     /* Enable/disable AHB bufferable write access support, when enabled,
                                      * FLEXSPI return before waiting for command execution finished */
 
-    bool enable_ahb_cachable;       /* Enable AHB bus cachable read access support */
+    bool enable_ahb_cachable;       /* Enable AHB bus cacheable read access support */
   } ahb_config;
 };
 
@@ -970,7 +973,7 @@ static int imx9_flexspi_read_blocking(struct flexspi_type_s *base,
           size = 0;
         }
 
-      /* Pop out a watermark level datas from IP RX FIFO */
+      /* Pop out a watermark level data from IP RX FIFO */
 
       base->INTR |= (uint32_t)FLEXSPI_IP_RX_FIFO_WATERMARK_AVAILABLE_FLAG;
     }

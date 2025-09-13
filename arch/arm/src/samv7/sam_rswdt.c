@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/samv7/sam_rswdt.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -494,7 +496,7 @@ static int sam_settimeout(struct watchdog_lowerhalf_s *lower,
   regval = WDT_MR_WDV(reload) | RSWDT_MR_WDD_ALLONES;
 
 #ifdef CONFIG_SAMV7_RSWDT_INTERRUPT
-  /* Generate an interrupt whent he watchdog timer expires */
+  /* Generate an interrupt when the watchdog timer expires */
 
   regval |= WDT_MR_WDFIEN;
 #else

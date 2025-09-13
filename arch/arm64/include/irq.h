@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/include/irq.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -151,10 +153,12 @@
 #define REG_SPSR            (33)
 #define REG_SP_EL0          (34)
 #define REG_EXE_DEPTH       (35)
+#define REG_SCTLR_EL1       (36)
+#define REG_RESERVED        (37)
 
 /* In Armv8-A Architecture, the stack must align with 16 byte */
 
-#define ARM64_CONTEXT_REGS  (36)
+#define ARM64_CONTEXT_REGS  (38)
 #define ARM64_CONTEXT_SIZE  (8 * ARM64_CONTEXT_REGS)
 
 #ifdef CONFIG_ARCH_FPU
@@ -224,6 +228,10 @@
 #define XCPTCONTEXT_REGS    (ARM64_CONTEXT_REGS + FPU_CONTEXT_REGS)
 #define XCPTCONTEXT_SIZE    (8 * XCPTCONTEXT_REGS)
 
+#if XCPTCONTEXT_SIZE % 16 != 0
+#  error "ARM64_CONTEXT_REGS and FPU_CONTEXT_REGS must be an even number to ensure the stack is aligned to 16 bytes"
+#endif
+
 /* Friendly register names */
 
 #define REG_FP              REG_X29
@@ -270,7 +278,7 @@ struct xcptcontext
 
   /* task context, for signal process */
 
-  uint64_t *saved_reg;
+  uint64_t *saved_regs;
 
 #ifdef CONFIG_ARCH_FPU
   uint64_t *fpu_regs;
@@ -324,7 +332,7 @@ struct xcptcontext
 
 /* Return the current IRQ state */
 
-static inline irqstate_t irqstate(void)
+static inline_function irqstate_t irqstate(void)
 {
   irqstate_t flags;
 
@@ -335,7 +343,7 @@ static inline irqstate_t irqstate(void)
 
 /* Disable IRQs and return the previous IRQ state */
 
-static inline irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags;
 
@@ -353,7 +361,7 @@ static inline irqstate_t up_irq_save(void)
 
 /* Enable IRQs and return the previous IRQ state */
 
-static inline irqstate_t up_irq_enable(void)
+static inline_function irqstate_t up_irq_enable(void)
 {
   irqstate_t flags;
 
@@ -370,7 +378,7 @@ static inline irqstate_t up_irq_enable(void)
 
 /* Restore saved IRQ & FIQ state */
 
-static inline void up_irq_restore(irqstate_t flags)
+static inline_function void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__("msr daif, %0" :: "r" (flags): "memory");
 }
@@ -416,7 +424,7 @@ static inline void up_irq_restore(irqstate_t flags)
 
 #define write_sysreg(__val, reg)                    \
   ({                                                \
-    __asm__ volatile ("msr " STRINGIFY(reg) ", %0"  \
+    __asm__ volatile ("msr " STRINGIFY(reg) ", %x0"  \
                       : : "r" (__val) : "memory");  \
   })
 
@@ -459,6 +467,14 @@ static inline void up_irq_restore(irqstate_t flags)
 
 #define up_getusrpc(regs) \
     (((uintptr_t *)((regs) ? (regs) : running_regs()))[REG_ELR])
+
+#ifndef CONFIG_BUILD_KERNEL
+#  define up_getusrsp(regs) \
+    ((uintptr_t)((uint64_t *)(regs))[REG_SP_ELX])
+#else
+#  define up_getusrsp(regs) \
+    ((uintptr_t)((uint64_t *)(regs))[REG_SP_EL0])
+#endif
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -41,6 +41,7 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
+#include <nuttx/net/netstats.h>
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
@@ -199,7 +200,13 @@ static inline void can_newdata(FAR struct net_driver_s *dev,
 
   if (recvlen < dev->d_len)
     {
-      can_datahandler(dev, pstate->pr_conn);
+      if (can_datahandler(dev, pstate->pr_conn) < dev->d_len)
+        {
+          ninfo("Dropped %d bytes\n", dev->d_len);
+#ifdef CONFIG_NET_STATISTICS
+          g_netstats.can.drop++;
+#endif
+        }
     }
 
   /* Indicate no data in the buffer */
@@ -236,8 +243,8 @@ static inline int can_readahead(struct can_recvfrom_s *pstate)
 
   pstate->pr_recvlen = -1;
 
-  if ((iob = iob_peek_queue(&conn->readahead)) != NULL &&
-      pstate->pr_buflen > 0)
+  if (pstate->pr_buflen > 0 &&
+      (iob = iob_remove_queue(&conn->readahead)) != NULL)
     {
       DEBUGASSERT(iob->io_pktlen > 0);
 
@@ -249,17 +256,7 @@ static inline int can_readahead(struct can_recvfrom_s *pstate)
 
       if (can_recv_filter(conn, can_id) == 0)
         {
-          FAR struct iob_s *tmp;
-
-          /* Remove the I/O buffer chain from the head of the read-ahead
-           * buffer queue.
-           */
-
-          tmp = iob_remove_queue(&conn->readahead);
-          DEBUGASSERT(tmp == iob);
-          UNUSED(tmp);
-
-          /* And free the I/O buffer chain */
+          /* Free the I/O buffer chain */
 
           iob_free_chain(iob);
           return 0;
@@ -281,37 +278,16 @@ static inline int can_readahead(struct can_recvfrom_s *pstate)
 
       recvlen = iob_copyout(pstate->pr_buffer, iob, pstate->pr_buflen, 0);
 
-      /* If we took all of the data from the I/O buffer chain is empty, then
-       * release it.  If there is still data available in the I/O buffer
-       * chain, then just trim the data that we have taken from the
-       * beginning of the I/O buffer chain.
+      /* We should have taken all of the data from the I/O buffer chain,
+       * so release it. There is no trimming needed, since One CAN/CANFD
+       * frame can always fit in one IOB.
        */
 
-      if (recvlen >= iob->io_pktlen)
-        {
-          FAR struct iob_s *tmp;
+      static_assert(sizeof(struct can_frame) <= CONFIG_IOB_BUFSIZE);
 
-          /* Remove the I/O buffer chain from the head of the read-ahead
-           * buffer queue.
-           */
+      /* Free the I/O buffer chain */
 
-          tmp = iob_remove_queue(&conn->readahead);
-          DEBUGASSERT(tmp == iob);
-          UNUSED(tmp);
-
-          /* And free the I/O buffer chain */
-
-          iob_free_chain(iob);
-        }
-      else
-        {
-          /* The bytes that we have received from the head of the I/O
-           * buffer chain (probably changing the head of the I/O
-           * buffer queue).
-           */
-
-          iob_trimhead_queue(&conn->readahead, recvlen);
-        }
+      iob_free_chain(iob);
 
       /* do not pass frames with DLC > 8 to a legacy socket */
 #if defined(CONFIG_NET_CANPROTO_OPTIONS) && defined(CONFIG_NET_CAN_CANFD)
@@ -524,6 +500,11 @@ ssize_t can_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
     {
       nerr("ERROR: Unsupported socket type: %d\n", psock->s_type);
       return -ENOSYS;
+    }
+
+  if (msg->msg_iovlen != 1)
+    {
+      return -ENOTSUP;
     }
 
   net_lock();

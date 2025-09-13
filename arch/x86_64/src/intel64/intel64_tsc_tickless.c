@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/x86_64/src/intel64/intel64_tsc_tickless.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -191,7 +193,7 @@ static inline void up_tmr_sync_down(void)
  *   when clockid is CLOCK_MONOTONIC.
  *
  *   This function provides the basis for reporting the current time and
- *   also is used to eliminate error build-up from small erros in interval
+ *   also is used to eliminate error build-up from small errors in interval
  *   time calculations.
  *
  *   Provided by platform-specific code and called from the RTOS base code.

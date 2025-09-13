@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/include/stm32h7/chip.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -74,6 +76,7 @@
     defined (CONFIG_ARCH_CHIP_STM32H7B3LI) || \
     defined (CONFIG_ARCH_CHIP_STM32H745XI) || \
     defined (CONFIG_ARCH_CHIP_STM32H745ZI) || \
+    defined (CONFIG_ARCH_CHIP_STM32H750B)  || \
     defined (CONFIG_ARCH_CHIP_STM32H755II)
 #elif defined(CONFIG_ARCH_CHIP_STM32H747XI)
 #else

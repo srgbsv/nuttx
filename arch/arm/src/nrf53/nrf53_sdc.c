@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/nrf53/nrf53_sdc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -907,12 +909,14 @@ int nrf53_sdc_initialize(void)
       return ret;
     }
 
+#ifndef CONFIG_BLUETOOTH_RPMSG_SERVER
   ret = bt_driver_register(&g_bt_driver);
   if (ret < 0)
     {
       wlerr("bt_driver_register error: %d\n", ret);
       return ret;
     }
+#endif
 
   return ret;
 }

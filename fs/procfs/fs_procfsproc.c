@@ -81,7 +81,7 @@
 #define STATUS_LINELEN PATH_MAX
 
 /****************************************************************************
- * Private Type Definitions
+ * Private Types
  ****************************************************************************/
 
 /* This enumeration identifies all of the task/thread nodes that can be
@@ -687,9 +687,9 @@ static ssize_t proc_cmdline(FAR struct proc_file_s *procfile,
 
   /* Show the task / thread argument list (skipping over the name) */
 
-  linesize   = nxtask_argvstr(tcb, procfile->line, remaining);
+  linesize   = nxtask_argvstr(tcb, procfile->line, sizeof(procfile->line));
   copysize   = procfs_memcpy(procfile->line, linesize, buffer,
-                             remaining, &offset);
+                             sizeof(procfile->line), &offset);
   totalsize += copysize;
   buffer    += copysize;
   remaining -= copysize;
@@ -774,9 +774,9 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
   /* Convert the for maximum time pre-emption disabled */
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
-  if (tcb->premp_max > 0)
+  if (tcb->preemp_max > 0)
     {
-      perf_convert(tcb->premp_max, &maxtime);
+      perf_convert(tcb->preemp_max, &maxtime);
     }
   else
     {
@@ -786,14 +786,14 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
 
   /* Reset the maximum */
 
-  tcb->premp_max = 0;
+  tcb->preemp_max = 0;
 
   /* Generate output for maximum time pre-emption disabled */
 
   linesize = procfs_snprintf(procfile->line, STATUS_LINELEN, "%lu.%09lu %p,",
                              (unsigned long)maxtime.tv_sec,
                              (unsigned long)maxtime.tv_nsec,
-                             tcb->premp_max_caller);
+                             tcb->preemp_max_caller);
   copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                            &offset);
 
@@ -902,7 +902,7 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
 #ifdef CONFIG_MM_KERNEL_HEAP
   if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
     {
-      info = fs_heap_mallinfo_task(&task);
+      info = kmm_mallinfo_task(&task);
     }
   else
 #endif
@@ -1252,7 +1252,6 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
                             size_t buflen, off_t offset)
 {
   FAR struct task_group_s *group = tcb->group;
-  FAR struct file *filep;
   FAR char *path;
   size_t remaining;
   size_t linesize;
@@ -1263,7 +1262,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
   DEBUGASSERT(group != NULL);
 
-  count = files_countlist(&group->tg_filelist);
+  count = fdlist_count(&group->tg_fdlist);
   if (count == 0)
     {
       return 0;
@@ -1303,11 +1302,12 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
   for (i = 0; i < count; i++)
     {
-      filep = files_fget(&group->tg_filelist, i);
+      FAR struct file *filep;
+      FAR struct fd *fdp;
 
       /* Is there an inode associated with the file descriptor? */
 
-      if (filep == NULL)
+      if (fdlist_get2(&group->tg_fdlist, i, &filep, &fdp) < 0)
         {
           continue;
         }
@@ -1327,13 +1327,13 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 #if CONFIG_FS_BACKTRACE > 0
           linesize += backtrace_format(procfile->line + linesize,
                                        STATUS_LINELEN - linesize,
-                                       filep->f_backtrace,
+                                       fdp->f_backtrace,
                                        CONFIG_FS_BACKTRACE);
 #endif
-          procfile->line[linesize - 2] = '\n';
+          procfile->line[linesize - 1] = '\n';
         }
 
-      fs_putfilep(filep);
+      file_put(filep);
       copysize   = procfs_memcpy(procfile->line, linesize,
                                  buffer, remaining, &offset);
 

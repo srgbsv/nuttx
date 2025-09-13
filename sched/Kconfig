@@ -150,6 +150,16 @@ config USEC_PER_TICK
 		This value should never be less than the underlying resolution of
 		the timer.  Error may ensue.
 
+config TIMER_ADJUST_USEC
+	int "System timer tick adjustment (microseconds)"
+	default 0
+	---help---
+		This value is added to the absolute tick set to the system timer.
+		This is used to compensate for interrupt latency in real-time
+		systems where the event required to be triggered on exact time.
+		The default value of 0 means that no adjustment is made. E.g.
+		5 means for each timer being set will be fired 5 microseconds earlier.
+
 if !SCHED_TICKLESS
 
 config SYSTEMTICK_EXTCLK
@@ -879,7 +889,7 @@ endchoice # Default NORMAL mutex robustness
 
 choice
 	prompt "Default pthread mutex protocol"
-	default PTHREAD_MUTEX_DEFAULT_PRIO_NONE
+	default PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT
 
 config PTHREAD_MUTEX_DEFAULT_PRIO_NONE
 	bool "PTHREAD_PRIO_NONE default"
@@ -1169,7 +1179,7 @@ config SCHED_PROFILE_TICKSPERSEC
 	int "Profile sampling rate"
 	default 1000
 	---help---
-		This is the frequency at which the profil functon will sample the
+		This is the frequency at which the profil function will sample the
 		running program. The default is 1000Hz.
 
 menuconfig SCHED_INSTRUMENTATION
@@ -1252,7 +1262,7 @@ config SCHED_INSTRUMENTATION_PREEMPTION
 		Enables additional hooks for changes to pre-emption state.  Board-
 		specific logic must provide this additional logic.
 
-			void sched_note_premption(FAR struct tcb_s *tcb, bool state);
+			void sched_note_preemption(FAR struct tcb_s *tcb, bool state);
 
 config SCHED_INSTRUMENTATION_CSECTION
 	bool "Critical section monitor hooks"
@@ -1399,18 +1409,6 @@ config FILE_STREAM
 	default !DEFAULT_SMALL
 	---help---
 		Enable the standard buffered input/output support
-
-config NAME_MAX
-	int "Maximum size of a file name"
-	default 32
-	---help---
-		The maximum size of a file name.
-
-config PATH_MAX
-	int "Maximum size of path name"
-	default 256
-	---help---
-		The maximum size of path name.
 
 endmenu # Files and I/O
 
@@ -1575,16 +1573,6 @@ config BOARD_INITTHREAD_PRIORITY
 		is very little competition for the CPU.
 
 endif # BOARD_LATE_INITIALIZE
-
-config SCHED_STARTHOOK
-	bool "Enable startup hook"
-	default n
-	---help---
-		Enable a non-standard, internal OS API call nxtask_starthook().
-		nxtask_starthook() registers a function that will be called on task
-		startup before that actual task entry point is called.  The
-		starthook is useful, for example, for setting up automatic
-		configuration of C++ constructors.
 
 endmenu # RTOS hooks
 
@@ -1754,7 +1742,7 @@ endmenu # POSIX Message Queue Options
 config MODULE
 	bool "Enable loadable OS modules"
 	default n
-	select LIBC_MODLIB
+	select LIBC_ELF
 	---help---
 		Enable support for loadable OS modules.  Default: n
 
@@ -1972,6 +1960,14 @@ config PTHREAD_STACK_DEFAULT
 	---help---
 		Default pthread stack size
 
+config PTHREAD_GUARDSIZE_DEFAULT
+	int "Default pthread guard area size"
+	default 0
+	---help---
+		This is the default amount of space to reserve at the overflow end of a
+		pthread stack. At this moment this option simply increases the size
+		of thread stacks.
+
 endmenu # Stack and heap information
 
 config SCHED_BACKTRACE
@@ -2012,17 +2008,18 @@ config SCHED_EVENTS
 		events to event objects.
 
 config ASSERT_PAUSE_CPU_TIMEOUT
-	int "Timeout in milisecond to pause another CPU when assert"
+	int "Timeout in millisecond to pause another CPU when assert"
 	default 2000
 	depends on SMP
 	---help---
-		Timeout in milisecond to pause another CPU when assert. Only available
+		Timeout in millisecond to pause another CPU when assert. Only available
 		when SMP is enabled.
 		Enable to support perf events.
 
 config COREDUMP
 	bool "Coredump support"
 	depends on ARCH_HAVE_TCBINFO
+	select LIBC_ARCH_ELF
 	default n
 	---help---
 		Generate ELF core dump to provide information about the CPU state and the
@@ -2030,3 +2027,10 @@ config COREDUMP
 		The memory state embeds a snapshot of all segments mapped in the
 		memory space of the program. The CPU state contains register values
 		when the core dump has been generated.
+
+config CUSTOM_SEMAPHORE_MAXVALUE
+	bool "Custom max value for semaphores"
+	default n
+	---help---
+		Enable to support custom max value for semaphores.
+		When this option is enabled, the max value of a semaphore can be set

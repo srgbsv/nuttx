@@ -60,19 +60,19 @@
 #include "hardware/esp32s3_syscon.h"
 #include "hardware/esp32s3_soc.h"
 #include "esp32s3_irq.h"
-#include "esp32s3_wireless.h"
+#include "espressif/esp_wireless.h"
 #include "esp32s3_wifi_adapter.h"
 #include "esp32s3_rt_timer.h"
-#include "esp32s3_wifi_utils.h"
-#include "esp32s3_wlan.h"
+#include "espressif/esp_wifi_utils.h"
+#include "espressif/esp_wlan.h"
 
 #ifdef CONFIG_PM
 #  include "esp32s3_pm.h"
 #endif
 
-#ifdef CONFIG_ESP32S3_BLE
+#ifdef CONFIG_ESPRESSIF_BLE
 #  include "esp32s3_ble_adapter.h"
-#  ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#  ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
 #    include "private/esp_coexist_internal.h"
 #  endif
 #endif
@@ -94,7 +94,7 @@
 
 #define PHY_RF_MASK   ((1 << PHY_BT_MODULE) | (1 << PHY_WIFI_MODULE))
 
-#define WIFI_CONNECT_TIMEOUT  CONFIG_ESP32S3_WIFI_CONNECT_TIMEOUT
+#define WIFI_CONNECT_TIMEOUT  CONFIG_ESPRESSIF_WIFI_CONNECT_TIMEOUT
 
 #define TIMER_INITIALIZED_VAL (0x5aa5a55a)
 
@@ -112,18 +112,6 @@
 #define RTC_CLK_CAL_FRACT  19  /* Number of fractional bits in values returned by rtc_clk_cal */
 
 #define ets_timer       _ETSTIMER_
-
-/* CONFIG_POWER_SAVE_MODEM */
-
-#if defined(CONFIG_ESP32S3_POWER_SAVE_MIN_MODEM)
-#  define DEFAULT_PS_MODE WIFI_PS_MIN_MODEM
-#elif defined(CONFIG_ESP32S3_POWER_SAVE_MAX_MODEM)
-#  define DEFAULT_PS_MODE WIFI_PS_MAX_MODEM
-#elif defined(CONFIG_ESP32S3_POWER_SAVE_NONE)
-#  define DEFAULT_PS_MODE WIFI_PS_NONE
-#else
-#  define DEFAULT_PS_MODE WIFI_PS_NONE
-#endif
 
 #define ESP_MAX_PRIORITIES (25)
 
@@ -167,25 +155,6 @@ struct time_adpt
   suseconds_t usec;         /* Micro second value */
 };
 
-/* Wi-Fi event private data */
-
-struct evt_adpt
-{
-  sq_entry_t entry;         /* Sequence entry */
-  int32_t id;               /* Event ID */
-  uint8_t buf[0];           /* Event private data */
-};
-
-/* Wi-Fi event notification private data */
-
-struct wifi_notify
-{
-  bool assigned;            /* Flag indicate if it is used */
-  pid_t pid;                /* Signal's target thread PID */
-  struct sigevent event;    /* Signal event private data */
-  struct sigwork_s work;    /* Signal work private data */
-};
-
 /* Wi-Fi NVS private data */
 
 struct nvs_adpt
@@ -197,11 +166,11 @@ struct nvs_adpt
  * Private Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
-static int semphr_take_from_isr_wrapper(void *semphr, void *hptw);
-static int semphr_give_from_isr_wrapper(void *semphr, void *hptw);
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
+static int32_t semphr_take_from_isr_wrapper(void *semphr, void *hptw);
+static int32_t semphr_give_from_isr_wrapper(void *semphr, void *hptw);
 static int is_in_isr_wrapper(void);
-#endif /* CONFIG_ESP32S3_WIFI_BT_COEXIST */
+#endif /* CONFIG_ESPRESSIF_WIFI_BT_COEXIST */
 
 static bool wifi_env_is_chip(void);
 static void wifi_set_intr(int32_t cpu_no, uint32_t intr_source,
@@ -244,8 +213,8 @@ static uint32_t esp_event_group_set_bits(void *event, uint32_t bits);
 static uint32_t esp_event_group_clear_bits(void *event, uint32_t bits);
 static uint32_t esp_event_group_wait_bits(void *event,
                                           uint32_t bits_to_wait_for,
-                                          int32_t clear_on_exit,
-                                          int32_t wait_for_all_bits,
+                                          int clear_on_exit,
+                                          int wait_for_all_bits,
                                           uint32_t block_time_tick);
 static int32_t esp_task_create_pinned_to_core(void *task_func,
                                               const char *name,
@@ -257,12 +226,17 @@ static int32_t esp_task_create_pinned_to_core(void *task_func,
 static int32_t esp_task_create(void *task_func, const char *name,
                                uint32_t stack_depth, void *param,
                                uint32_t prio, void *task_handle);
+static int32_t esp_event_post_wrapper(const char *event_base,
+                                      int32_t event_id,
+                                      void *event_data,
+                                      size_t event_data_size,
+                                      uint32_t ticks_to_wait);
 static void esp_task_delete(void *task_handle);
 static void esp_task_delay(uint32_t tick);
 static int32_t esp_task_ms_to_tick(uint32_t ms);
 static void *esp_task_get_current_task(void);
 static int32_t esp_task_get_max_priority(void);
-static void *esp_malloc(uint32_t size);
+static void *esp_malloc(size_t size);
 static void esp_free(void *ptr);
 static uint32_t esp_get_free_heap_size(void);
 static uint32_t esp_rand(void);
@@ -272,7 +246,7 @@ static void wifi_apb80m_request(void);
 static void wifi_apb80m_release(void);
 static void esp_phy_enable_wrapper(void);
 static void esp_phy_disable_wrapper(void);
-static int32_t esp_wifi_read_mac(uint8_t *mac, uint32_t type);
+static int esp_wifi_read_mac(uint8_t *mac, unsigned int type);
 static void esp_timer_arm(void *timer, uint32_t tmout, bool repeat);
 static void esp_timer_disarm(void *timer);
 static void esp32s3_timer_done(void *timer);
@@ -284,33 +258,33 @@ static void wifi_clock_disable(void);
 static void wifi_rtc_enable_iso(void);
 static void wifi_rtc_disable_iso(void);
 static int64_t esp32s3_timer_get_time(void);
-static int32_t esp_nvs_set_i8(uint32_t handle, const char *key,
-                              int8_t value);
-static int32_t esp_nvs_get_i8(uint32_t handle, const char *key,
-                              int8_t *out_value);
-static int32_t esp_nvs_set_u8(uint32_t handle, const char *key,
-                              uint8_t value);
-static int32_t esp_nvs_get_u8(uint32_t handle, const char *key,
-                              uint8_t *out_value);
-static int32_t esp_nvs_set_u16(uint32_t handle, const char *key,
-                               uint16_t value);
-static int32_t esp_nvs_get_u16(uint32_t handle, const char *key,
-                               uint16_t *out_value);
-static int32_t esp_nvs_open(const char *name, uint32_t open_mode,
-                            uint32_t *out_handle);
+static int esp_nvs_set_i8(uint32_t handle, const char *key,
+                          int8_t value);
+static int esp_nvs_get_i8(uint32_t handle, const char *key,
+                          int8_t *out_value);
+static int esp_nvs_set_u8(uint32_t handle, const char *key,
+                          uint8_t value);
+static int esp_nvs_get_u8(uint32_t handle, const char *key,
+                          uint8_t *out_value);
+static int esp_nvs_set_u16(uint32_t handle, const char *key,
+                           uint16_t value);
+static int esp_nvs_get_u16(uint32_t handle, const char *key,
+                           uint16_t *out_value);
+static int esp_nvs_open(const char *name, unsigned int open_mode,
+                        uint32_t *out_handle);
 static void esp_nvs_close(uint32_t handle);
-static int32_t esp_nvs_commit(uint32_t handle);
-static int32_t esp_nvs_set_blob(uint32_t handle, const char *key,
+static int esp_nvs_commit(uint32_t handle);
+static int esp_nvs_set_blob(uint32_t handle, const char *key,
                                 const void *value, size_t length);
-static int32_t esp_nvs_get_blob(uint32_t handle, const char *key,
+static int esp_nvs_get_blob(uint32_t handle, const char *key,
                                 void *out_value, size_t *length);
-static int32_t esp_nvs_erase_key(uint32_t handle, const char *key);
-static int32_t esp_get_random(uint8_t *buf, size_t len);
-static int32_t esp_get_time(void *t);
+static int esp_nvs_erase_key(uint32_t handle, const char *key);
+static int esp_get_random(uint8_t *buf, size_t len);
+static int esp_get_time(void *t);
 static uint32_t esp_clk_slowclk_cal_get_wrapper(void);
-static void esp_log_writev_wrapper(uint32_t level, const char *tag,
+static void esp_log_writev_wrapper(unsigned int level, const char *tag,
                                    const char *format, va_list args);
-static void esp_log_write_wrapper(uint32_t level,
+static void esp_log_write_wrapper(unsigned int level,
                                   const char *tag,
                                   const char *format, ...);
 static void *esp_malloc_internal(size_t size);
@@ -321,16 +295,16 @@ static void *esp_wifi_malloc(size_t size);
 static void *esp_wifi_realloc(void *ptr, size_t size);
 static void *esp_wifi_calloc(size_t n, size_t size);
 static void *esp_wifi_zalloc(size_t size);
-static void *esp_wifi_create_queue(int32_t queue_len, int32_t item_size);
+static void *esp_wifi_create_queue(int queue_len, int item_size);
 static void esp_wifi_delete_queue(void *queue);
 static int coex_init_wrapper(void);
 static void coex_deinit_wrapper(void);
 static int coex_enable_wrapper(void);
 static void coex_disable_wrapper(void);
 static uint32_t coex_status_get_wrapper(void);
-static int32_t coex_wifi_request_wrapper(uint32_t event, uint32_t latency,
+static int coex_wifi_request_wrapper(uint32_t event, uint32_t latency,
                                      uint32_t duration);
-static int32_t coex_wifi_release_wrapper(uint32_t event);
+static int coex_wifi_release_wrapper(uint32_t event);
 static unsigned long esp_random_ulong(void);
 static int coex_wifi_channel_set_wrapper(uint8_t primary, uint8_t secondary);
 static int coex_event_duration_get_wrapper(uint32_t event,
@@ -349,65 +323,31 @@ static int coex_schm_process_restart_wrapper(void);
 static int coex_schm_register_cb_wrapper(int type, int(*cb)(int));
 static int coex_schm_flexible_period_set_wrapper(uint8_t period);
 static uint8_t coex_schm_flexible_period_get_wrapper(void);
+static void * coex_schm_get_phase_by_idx_wrapper(int phase_idx);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* Wi-Fi event private data */
-
-static struct work_s g_wifi_evt_work;
-static sq_queue_t g_wifi_evt_queue;
-static struct wifi_notify g_wifi_notify[WIFI_ADPT_EVT_MAX];
-static mutex_t g_wifiexcl_lock = NXMUTEX_INITIALIZER;
-
 /* Wi-Fi adapter reference */
 
 static int g_wifi_ref;
 
-#ifdef ESP32S3_WLAN_HAS_STA
-
-/* If reconnect automatically */
-
-static bool g_sta_reconnect;
-
-/* If Wi-Fi sta starts */
-
-static bool g_sta_started;
-
-/* If Wi-Fi sta connected */
-
-static bool g_sta_connected;
+#ifdef ESPRESSIF_WLAN_HAS_STA
 
 /* Wi-Fi station TX done callback function */
 
 static wifi_txdone_cb_t g_sta_txdone_cb;
 
-/* Wi-Fi interface configuration */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
 
-static wifi_config_t g_sta_wifi_cfg;
-
-#endif /* ESP32S3_WLAN_HAS_STA */
-
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
-
-/* If Wi-Fi SoftAP starts */
-
-static bool g_softap_started;
+#ifdef ESPRESSIF_WLAN_HAS_SOFTAP
 
 /* Wi-Fi SoftAP TX done callback function */
 
 static wifi_txdone_cb_t g_softap_txdone_cb;
 
-/* Wi-Fi interface configuration */
-
-static wifi_config_t g_softap_wifi_cfg;
-
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
-
-/* Device specific lock */
-
-static spinlock_t g_lock;
+#endif /* ESPRESSIF_WLAN_HAS_SOFTAP */
 
 /****************************************************************************
  * Public Data
@@ -415,7 +355,7 @@ static spinlock_t g_lock;
 
 /* Wi-Fi and BT coexistence OS adapter data */
 
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
 coex_adapter_funcs_t g_coex_adapter_funcs =
 {
   ._version = COEX_ADAPTER_VERSION,
@@ -436,7 +376,7 @@ coex_adapter_funcs_t g_coex_adapter_funcs =
   ._timer_arm_us = esp_timer_arm_us,
   ._magic = COEX_ADAPTER_MAGIC,
 };
-#endif /* CONFIG_ESP32S3_WIFI_BT_COEXIST */
+#endif /* CONFIG_ESPRESSIF_WIFI_BT_COEXIST */
 
 /* Wi-Fi OS adapter data */
 
@@ -487,7 +427,7 @@ wifi_osi_funcs_t g_wifi_osi_funcs =
   ._task_get_max_priority = esp_task_get_max_priority,
   ._malloc = esp_malloc,
   ._free = esp_free,
-  ._event_post = esp_event_post,
+  ._event_post = esp_event_post_wrapper,
   ._get_free_heap_size = esp_get_free_heap_size,
   ._rand = esp_rand,
   ._dport_access_stall_other_cpu_start_wrap =
@@ -498,7 +438,7 @@ wifi_osi_funcs_t g_wifi_osi_funcs =
   ._wifi_apb80m_release = wifi_apb80m_release,
   ._phy_disable = esp_phy_disable_wrapper,
   ._phy_enable = esp_phy_enable_wrapper,
-  ._phy_update_country_info = esp32s3_phy_update_country_info,
+  ._phy_update_country_info = esp_phy_update_country_info,
   ._read_mac = esp_wifi_read_mac,
   ._timer_arm = esp_timer_arm,
   ._timer_disarm = esp_timer_disarm,
@@ -561,12 +501,27 @@ wifi_osi_funcs_t g_wifi_osi_funcs =
   ._coex_schm_register_cb = coex_schm_register_cb_wrapper,
   ._coex_schm_flexible_period_set = coex_schm_flexible_period_set_wrapper,
   ._coex_schm_flexible_period_get = coex_schm_flexible_period_get_wrapper,
+  ._coex_schm_get_phase_by_idx = coex_schm_get_phase_by_idx_wrapper,
   ._magic = ESP_WIFI_OS_ADAPTER_MAGIC,
 };
 
-/* Wi-Fi TAG string data */
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
 
-ESP_EVENT_DEFINE_BASE(WIFI_EVENT);
+/* Wi-Fi interface configuration */
+
+#ifdef ESPRESSIF_WLAN_HAS_STA
+
+extern wifi_config_t g_sta_wifi_cfg;
+
+#endif /* ESPRESSIF_WLAN_HAS_STA */
+
+#ifdef ESPRESSIF_WLAN_HAS_SOFTAP
+
+extern wifi_config_t g_softap_wifi_cfg;
+
+#endif /* ESPRESSIF_WLAN_HAS_SOFTAP */
 
 /****************************************************************************
  * Private Functions and Public Functions only used by libraries
@@ -731,44 +686,6 @@ static void esp_update_time(struct timespec *timespec, uint32_t ticks)
 }
 
 /****************************************************************************
- * Name: esp_wifi_lock
- *
- * Description:
- *   Lock or unlock the event process
- *
- * Input Parameters:
- *   lock - true: Lock event process, false: unlock event process
- *
- * Returned Value:
- *   The result of lock or unlock the event process
- *
- ****************************************************************************/
-
-static int esp_wifi_lock(bool lock)
-{
-  int ret;
-
-  if (lock)
-    {
-      ret = nxmutex_lock(&g_wifiexcl_lock);
-      if (ret < 0)
-        {
-          wlinfo("Failed to lock Wi-Fi ret=%d\n", ret);
-        }
-    }
-  else
-    {
-      ret = nxmutex_unlock(&g_wifiexcl_lock);
-      if (ret < 0)
-        {
-          wlinfo("Failed to unlock Wi-Fi ret=%d\n", ret);
-        }
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: esp_set_isr
  *
  * Description:
@@ -791,7 +708,7 @@ static void esp_set_isr(int32_t n, void *f, void *arg)
   struct irq_adpt *adapter;
   int irq = n + XTENSA_IRQ_FIRSTPERIPH;
 
-  wlinfo("n=%d f=%p arg=%p", n, f, arg);
+  wlinfo("n=%" PRId32 " f=%p arg=%p", n, f, arg);
 
   if (g_irqvector[irq].handler &&
       g_irqvector[irq].handler != irq_unexpected_isr)
@@ -805,7 +722,7 @@ static void esp_set_isr(int32_t n, void *f, void *arg)
   adapter = kmm_malloc(tmp);
   if (!adapter)
     {
-      wlerr("Failed to alloc %d memory\n", tmp);
+      wlerr("Failed to alloc %" PRIu32 " memory\n", tmp);
       PANIC();
       return;
     }
@@ -848,7 +765,7 @@ static void esp32s3_ints_on(uint32_t mask)
 {
   int irq = __builtin_ffs(mask) - 1;
 
-  wlinfo("INFO mask=%08x irq=%d\n", mask, irq);
+  wlinfo("INFO mask=%08" PRIx32 " irq=%d\n", mask, irq);
 
   up_enable_irq(ESP32S3_IRQ_MAC);
   up_enable_irq(ESP32S3_IRQ_PWR);
@@ -872,7 +789,7 @@ static void esp32s3_ints_off(uint32_t mask)
 {
   uint32_t irq = __builtin_ffs(mask) - 1;
 
-  wlinfo("INFO mask=%08x irq=%d\n", mask, irq);
+  wlinfo("INFO mask=%08" PRIx32 " irq=%" PRIu32 "\n", mask, irq);
 
   up_disable_irq(ESP32S3_IRQ_MAC);
 }
@@ -923,7 +840,7 @@ static void *esp_spin_lock_create(void)
       DEBUGPANIC();
     }
 
-  spin_initialize(lock, SP_UNLOCKED);
+  spin_lock_init(lock);
 
   return lock;
 }
@@ -1112,7 +1029,7 @@ static int32_t esp_semphr_take(void *semphr, uint32_t block_time_tick)
 
   if (ret)
     {
-      wlerr("ERROR: Failed to wait sem in %u ticks. Error=%d\n",
+      wlerr("ERROR: Failed to wait sem in %" PRIu32 " ticks. Error=%d\n",
             block_time_tick, ret);
     }
 
@@ -1755,8 +1672,8 @@ static uint32_t esp_event_group_clear_bits(void *event, uint32_t bits)
 
 static uint32_t esp_event_group_wait_bits(void *event,
                                           uint32_t bits_to_wait_for,
-                                          int32_t clear_on_exit,
-                                          int32_t wait_for_all_bits,
+                                          int clear_on_exit,
+                                          int wait_for_all_bits,
                                           uint32_t block_time_tick)
 {
   DEBUGPANIC();
@@ -1980,7 +1897,7 @@ static int32_t esp_task_get_max_priority(void)
  *
  ****************************************************************************/
 
-static void *esp_malloc(uint32_t size)
+static void *esp_malloc(size_t size)
 {
   return kmm_malloc(size);
 }
@@ -2022,258 +1939,7 @@ static void esp_free(void *ptr)
 #endif
 }
 
-/****************************************************************************
- * Name: esp_event_id_map
- *
- * Description:
- *   Transform from esp-idf event ID to Wi-Fi adapter event ID
- *
- * Input Parameters:
- *   event_id - esp-idf event ID
- *
- * Returned Value:
- *   Wi-Fi adapter event ID
- *
- ****************************************************************************/
-
-static int esp_event_id_map(int event_id)
-{
-  int id;
-
-  switch (event_id)
-    {
-      case WIFI_EVENT_SCAN_DONE:
-        id = WIFI_ADPT_EVT_SCAN_DONE;
-        break;
-
-#ifdef ESP32S3_WLAN_HAS_STA
-      case WIFI_EVENT_STA_START:
-        id = WIFI_ADPT_EVT_STA_START;
-        break;
-
-      case WIFI_EVENT_STA_CONNECTED:
-        id = WIFI_ADPT_EVT_STA_CONNECT;
-        break;
-
-      case WIFI_EVENT_STA_DISCONNECTED:
-        id = WIFI_ADPT_EVT_STA_DISCONNECT;
-        break;
-
-      case WIFI_EVENT_STA_AUTHMODE_CHANGE:
-        id = WIFI_ADPT_EVT_STA_AUTHMODE_CHANGE;
-        break;
-
-      case WIFI_EVENT_STA_STOP:
-        id = WIFI_ADPT_EVT_STA_STOP;
-        break;
-#endif /* ESP32S3_WLAN_HAS_STA */
-
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
-      case WIFI_EVENT_AP_START:
-        id = WIFI_ADPT_EVT_AP_START;
-        break;
-
-      case WIFI_EVENT_AP_STOP:
-        id = WIFI_ADPT_EVT_AP_STOP;
-        break;
-
-      case WIFI_EVENT_AP_STACONNECTED:
-        id = WIFI_ADPT_EVT_AP_STACONNECTED;
-        break;
-
-      case WIFI_EVENT_AP_STADISCONNECTED:
-        id = WIFI_ADPT_EVT_AP_STADISCONNECTED;
-        break;
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
-
-      default:
-        return -1;
-    }
-
-  return id;
-}
-
-/****************************************************************************
- * Name: esp_evt_work_cb
- *
- * Description:
- *   Process the cached event
- *
- * Input Parameters:
- *   arg - No mean
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void esp_evt_work_cb(void *arg)
-{
-  int ret;
-  irqstate_t flags;
-  struct evt_adpt *evt_adpt;
-  struct wifi_notify *notify;
-  wifi_ps_type_t ps_type = DEFAULT_PS_MODE;
-
-  while (1)
-    {
-      flags = spin_lock_irqsave(&g_lock);
-      evt_adpt = (struct evt_adpt *)sq_remfirst(&g_wifi_evt_queue);
-      spin_unlock_irqrestore(&g_lock, flags);
-      if (!evt_adpt)
-        {
-          break;
-        }
-
-      esp_wifi_lock(true);
-
-      switch (evt_adpt->id)
-        {
-          case WIFI_ADPT_EVT_SCAN_DONE:
-            esp_wifi_scan_event_parse();
-            break;
-
-#ifdef ESP32S3_WLAN_HAS_STA
-          case WIFI_ADPT_EVT_STA_START:
-            wlinfo("Wi-Fi sta start\n");
-
-            g_sta_connected = false;
-
-#ifdef CONFIG_ESP32S3_BLE
-            if (esp32s3_bt_controller_get_status() !=
-                ESP_BT_CONTROLLER_STATUS_IDLE)
-              {
-                if (ps_type == WIFI_PS_NONE)
-                  {
-                    ps_type = WIFI_PS_MIN_MODEM;
-                  }
-              }
-#endif
-            ret = esp_wifi_set_ps(ps_type);
-
-            if (ret)
-              {
-                wlerr("Failed to set power save type\n");
-                break;
-              }
-            else
-              {
-                wlinfo("INFO: Set ps type=%d\n", ps_type);
-              }
-
-            ret = esp_wifi_get_config(WIFI_IF_STA, &g_sta_wifi_cfg);
-            if (ret)
-              {
-                wlerr("Failed to get Wi-Fi config data ret=%d\n", ret);
-              }
-            break;
-
-          case WIFI_ADPT_EVT_STA_CONNECT:
-            wlinfo("Wi-Fi sta connect\n");
-            g_sta_connected = true;
-            ret = esp32s3_wlan_sta_set_linkstatus(true);
-            if (ret < 0)
-              {
-                wlerr("ERROR: Failed to set Wi-Fi station link status\n");
-              }
-
-            break;
-
-          case WIFI_ADPT_EVT_STA_DISCONNECT:
-            wlinfo("Wi-Fi sta disconnect\n");
-            g_sta_connected = false;
-            ret = esp32s3_wlan_sta_set_linkstatus(false);
-            if (ret < 0)
-              {
-                wlerr("ERROR: Failed to set Wi-Fi station link status\n");
-              }
-
-            if (g_sta_reconnect)
-              {
-                ret = esp_wifi_connect();
-                if (ret)
-                  {
-                    wlerr("Failed to connect AP error=%d\n", ret);
-                  }
-              }
-            break;
-
-          case WIFI_ADPT_EVT_STA_STOP:
-            wlinfo("Wi-Fi sta stop\n");
-            g_sta_connected = false;
-            break;
-#endif /* ESP32S3_WLAN_HAS_STA */
-
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
-          case WIFI_ADPT_EVT_AP_START:
-            wlinfo("INFO: Wi-Fi softap start\n");
-
-#ifdef CONFIG_ESP32S3_BLE
-            if (esp32s3_bt_controller_get_status() !=
-                ESP_BT_CONTROLLER_STATUS_IDLE)
-              {
-                if (ps_type == WIFI_PS_NONE)
-                  {
-                    ps_type = WIFI_PS_MIN_MODEM;
-                  }
-              }
-#endif
-            ret = esp_wifi_set_ps(ps_type);
-
-            if (ret)
-              {
-                wlerr("Failed to set power save type\n");
-                break;
-              }
-            else
-              {
-                wlinfo("INFO: Set ps type=%d\n", ps_type);
-              }
-
-            ret = esp_wifi_get_config(WIFI_IF_AP, &g_softap_wifi_cfg);
-            if (ret)
-              {
-                wlerr("Failed to get Wi-Fi config data ret=%d\n", ret);
-              }
-            break;
-
-          case WIFI_ADPT_EVT_AP_STOP:
-            wlinfo("INFO: Wi-Fi softap stop\n");
-            break;
-
-          case WIFI_ADPT_EVT_AP_STACONNECTED:
-            wlinfo("INFO: Wi-Fi station join\n");
-            break;
-
-          case WIFI_ADPT_EVT_AP_STADISCONNECTED:
-            wlinfo("INFO: Wi-Fi station leave\n");
-            break;
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
-          default:
-            break;
-        }
-
-      notify = &g_wifi_notify[evt_adpt->id];
-      if (notify->assigned)
-        {
-          notify->event.sigev_value.sival_ptr = evt_adpt->buf;
-
-          ret = nxsig_notification(notify->pid, &notify->event,
-                                   SI_QUEUE, &notify->work);
-          if (ret < 0)
-            {
-              wlwarn("nxsig_notification event ID=%d failed: %d\n",
-                     evt_adpt->id, ret);
-            }
-        }
-
-      esp_wifi_lock(false);
-
-      kmm_free(evt_adpt);
-    }
-}
-
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
 
 /****************************************************************************
  * Name: semphr_take_from_isr_wrapper
@@ -2290,7 +1956,8 @@ static void esp_evt_work_cb(void *arg)
  *
  ****************************************************************************/
 
-static int IRAM_ATTR semphr_take_from_isr_wrapper(void *semphr, void *hptw)
+static int32_t IRAM_ATTR semphr_take_from_isr_wrapper(void *semphr,
+                                                      void *hptw)
 {
   *(int *)hptw = 0;
 
@@ -2312,7 +1979,8 @@ static int IRAM_ATTR semphr_take_from_isr_wrapper(void *semphr, void *hptw)
  *
  ****************************************************************************/
 
-static int IRAM_ATTR semphr_give_from_isr_wrapper(void *semphr, void *hptw)
+static int32_t IRAM_ATTR semphr_give_from_isr_wrapper(void *semphr,
+                                                      void *hptw)
 {
   *(int *)hptw = 0;
 
@@ -2338,7 +2006,7 @@ static int IRAM_ATTR is_in_isr_wrapper(void)
   return up_interrupt_context();
 }
 
-#endif /* CONFIG_ESP32S3_WIFI_BT_COEXIST */
+#endif /* CONFIG_ESPRESSIF_WIFI_BT_COEXIST */
 
 /****************************************************************************
  * Name: wifi_env_is_chip
@@ -2395,7 +2063,7 @@ static void IRAM_ATTR wifi_clear_intr(uint32_t intr_source,
 }
 
 /****************************************************************************
- * Name: esp_event_post
+ * Name: esp_event_post_wrapper
  *
  * Description:
  *   Active work queue and let the work to process the cached event
@@ -2412,45 +2080,17 @@ static void IRAM_ATTR wifi_clear_intr(uint32_t intr_source,
  *
  ****************************************************************************/
 
-int32_t esp_event_post(esp_event_base_t event_base,
-                       int32_t event_id,
-                       void *event_data,
-                       size_t event_data_size,
-                       uint32_t ticks)
+static int32_t esp_event_post_wrapper(const char *event_base,
+                                      int32_t event_id,
+                                      void *event_data,
+                                      size_t event_data_size,
+                                      uint32_t ticks_to_wait)
 {
-  size_t size;
-  int32_t id;
-  irqstate_t flags;
-  struct evt_adpt *evt_adpt;
-
-  wlinfo("Event: base=%s id=%d data=%p data_size=%d ticks=%u\n", event_base,
-         event_id, event_data, event_data_size, ticks);
-
-  id = esp_event_id_map(event_id);
-  if (id < 0)
-    {
-      wlinfo("No process event %d\n", event_id);
-      return -1;
-    }
-
-  size = event_data_size + sizeof(struct evt_adpt);
-  evt_adpt = kmm_malloc(size);
-  if (!evt_adpt)
-    {
-      wlerr("Failed to alloc %d memory\n", size);
-      return -1;
-    }
-
-  evt_adpt->id = id;
-  memcpy(evt_adpt->buf, event_data, event_data_size);
-
-  flags = spin_lock_irqsave(&g_lock);
-  sq_addlast(&evt_adpt->entry, &g_wifi_evt_queue);
-  spin_unlock_irqrestore(&g_lock, flags);
-
-  work_queue(LPWORK, &g_wifi_evt_work, esp_evt_work_cb, NULL, 0);
-
-  return 0;
+  return (int32_t)esp_event_post(event_base,
+                                 event_id,
+                                 event_data,
+                                 event_data_size,
+                                 ticks_to_wait);
 }
 
 /****************************************************************************
@@ -2594,7 +2234,7 @@ static void esp_phy_disable_wrapper(void)
  *
  ****************************************************************************/
 
-static int32_t esp_wifi_read_mac(uint8_t *mac, uint32_t type)
+static int esp_wifi_read_mac(uint8_t *mac, unsigned int type)
 {
   return esp_read_mac(mac, type);
 }
@@ -2881,9 +2521,9 @@ int64_t esp32s3_timer_get_time(void)
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_set_i8(uint32_t handle,
-                              const char *key,
-                              int8_t value)
+static int esp_nvs_set_i8(uint32_t handle,
+                          const char *key,
+                          int8_t value)
 {
   DEBUGPANIC();
 
@@ -2906,9 +2546,9 @@ static int32_t esp_nvs_set_i8(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_get_i8(uint32_t handle,
-                              const char *key,
-                              int8_t *out_value)
+static int esp_nvs_get_i8(uint32_t handle,
+                          const char *key,
+                          int8_t *out_value)
 {
   DEBUGPANIC();
 
@@ -2931,9 +2571,9 @@ static int32_t esp_nvs_get_i8(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_set_u8(uint32_t handle,
-                              const char *key,
-                              uint8_t value)
+static int esp_nvs_set_u8(uint32_t handle,
+                          const char *key,
+                          uint8_t value)
 {
   DEBUGPANIC();
 
@@ -2956,9 +2596,9 @@ static int32_t esp_nvs_set_u8(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_get_u8(uint32_t handle,
-                              const char *key,
-                              uint8_t *out_value)
+static int esp_nvs_get_u8(uint32_t handle,
+                          const char *key,
+                          uint8_t *out_value)
 {
   DEBUGPANIC();
 
@@ -2981,9 +2621,9 @@ static int32_t esp_nvs_get_u8(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_set_u16(uint32_t handle,
-                               const char *key,
-                               uint16_t value)
+static int esp_nvs_set_u16(uint32_t handle,
+                           const char *key,
+                           uint16_t value)
 {
   DEBUGPANIC();
 
@@ -3006,9 +2646,9 @@ static int32_t esp_nvs_set_u16(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_get_u16(uint32_t handle,
-                               const char *key,
-                               uint16_t *out_value)
+static int esp_nvs_get_u16(uint32_t handle,
+                           const char *key,
+                           uint16_t *out_value)
 {
   DEBUGPANIC();
 
@@ -3031,9 +2671,9 @@ static int32_t esp_nvs_get_u16(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_open(const char *name,
-                            uint32_t open_mode,
-                            uint32_t *out_handle)
+static int esp_nvs_open(const char *name,
+                        unsigned int open_mode,
+                        uint32_t *out_handle)
 {
   DEBUGPANIC();
 
@@ -3067,7 +2707,7 @@ static void esp_nvs_close(uint32_t handle)
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_commit(uint32_t handle)
+static int esp_nvs_commit(uint32_t handle)
 {
   return 0;
 }
@@ -3089,7 +2729,7 @@ static int32_t esp_nvs_commit(uint32_t handle)
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_set_blob(uint32_t handle,
+static int esp_nvs_set_blob(uint32_t handle,
                                 const char *key,
                                 const void *value,
                                 size_t length)
@@ -3116,7 +2756,7 @@ static int32_t esp_nvs_set_blob(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_get_blob(uint32_t handle,
+static int esp_nvs_get_blob(uint32_t handle,
                                 const char *key,
                                 void *out_value,
                                 size_t *length)
@@ -3141,7 +2781,7 @@ static int32_t esp_nvs_get_blob(uint32_t handle,
  *
  ****************************************************************************/
 
-static int32_t esp_nvs_erase_key(uint32_t handle, const char *key)
+static int esp_nvs_erase_key(uint32_t handle, const char *key)
 {
   DEBUGPANIC();
 
@@ -3163,7 +2803,7 @@ static int32_t esp_nvs_erase_key(uint32_t handle, const char *key)
  *
  ****************************************************************************/
 
-static int32_t esp_get_random(uint8_t *buf, size_t len)
+static int esp_get_random(uint8_t *buf, size_t len)
 {
   esp_fill_random(buf, len);
 
@@ -3184,7 +2824,7 @@ static int32_t esp_get_random(uint8_t *buf, size_t len)
  *
  ****************************************************************************/
 
-static int32_t esp_get_time(void *t)
+static int esp_get_time(void *t)
 {
   int ret;
   struct timeval tv;
@@ -3273,7 +2913,7 @@ static uint32_t esp_clk_slowclk_cal_get_wrapper(void)
  *
  ****************************************************************************/
 
-static void esp_log_writev_wrapper(uint32_t level, const char *tag,
+static void esp_log_writev_wrapper(unsigned int level, const char *tag,
                                    const char *format, va_list args)
 {
   esp_log_level_t max_level;
@@ -3310,7 +2950,7 @@ static void esp_log_writev_wrapper(uint32_t level, const char *tag,
  *
  ****************************************************************************/
 
-static void esp_log_write_wrapper(uint32_t level,
+static void esp_log_write_wrapper(unsigned int level,
                                   const char *tag,
                                   const char *format, ...)
 {
@@ -3586,7 +3226,7 @@ static void *esp_wifi_zalloc(size_t size)
  *
  ****************************************************************************/
 
-static void *esp_wifi_create_queue(int32_t queue_len, int32_t item_size)
+static void *esp_wifi_create_queue(int queue_len, int item_size)
 {
   wifi_static_queue_t *wifi_queue;
 
@@ -3647,7 +3287,7 @@ static void esp_wifi_delete_queue(void *queue)
 
 static int coex_init_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_init();
 #else
   return 0;
@@ -3670,7 +3310,7 @@ static int coex_init_wrapper(void)
 
 static void coex_deinit_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   coex_deinit();
 #endif
 }
@@ -3692,7 +3332,7 @@ static void coex_deinit_wrapper(void)
 
 static int coex_enable_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_enable();
 #else
   return 0;
@@ -3715,7 +3355,7 @@ static int coex_enable_wrapper(void)
 
 static void coex_disable_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   coex_disable();
 #endif
 }
@@ -3737,8 +3377,8 @@ static void coex_disable_wrapper(void)
 
 static IRAM_ATTR uint32_t coex_status_get_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
-  return coex_status_get();
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
+  return coex_status_get(COEX_STATUS_GET_WIFI_BITMAP);
 #else
   return 0;
 #endif
@@ -3761,10 +3401,10 @@ static IRAM_ATTR uint32_t coex_status_get_wrapper(void)
  *
  ****************************************************************************/
 
-static int32_t coex_wifi_request_wrapper(uint32_t event, uint32_t latency,
-                                         uint32_t duration)
+static int coex_wifi_request_wrapper(uint32_t event, uint32_t latency,
+                                     uint32_t duration)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_wifi_request(event, latency, duration);
 #else
   return 0;
@@ -3786,9 +3426,9 @@ static int32_t coex_wifi_request_wrapper(uint32_t event, uint32_t latency,
  *
  ****************************************************************************/
 
-static IRAM_ATTR int32_t coex_wifi_release_wrapper(uint32_t event)
+static IRAM_ATTR int coex_wifi_release_wrapper(uint32_t event)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_wifi_release(event);
 #else
   return 0;
@@ -3813,7 +3453,7 @@ static IRAM_ATTR int32_t coex_wifi_release_wrapper(uint32_t event)
 
 static int coex_wifi_channel_set_wrapper(uint8_t primary, uint8_t secondary)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_wifi_channel_set(primary, secondary);
 #else
   return 0;
@@ -3839,7 +3479,7 @@ static int coex_wifi_channel_set_wrapper(uint8_t primary, uint8_t secondary)
 static int coex_event_duration_get_wrapper(uint32_t event,
                                            uint32_t *duration)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_event_duration_get(event, duration);
 #else
   return 0;
@@ -3864,7 +3504,7 @@ static int coex_event_duration_get_wrapper(uint32_t event,
 
 static int coex_pti_get_wrapper(uint32_t event, uint8_t *pti)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_pti_get(event, pti);
 #else
   return 0;
@@ -3889,7 +3529,7 @@ static int coex_pti_get_wrapper(uint32_t event, uint8_t *pti)
 static void coex_schm_status_bit_clear_wrapper(uint32_t type,
                                                uint32_t status)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   coex_schm_status_bit_clear(type, status);
 #endif
 }
@@ -3911,7 +3551,7 @@ static void coex_schm_status_bit_clear_wrapper(uint32_t type,
 
 static void coex_schm_status_bit_set_wrapper(uint32_t type, uint32_t status)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   coex_schm_status_bit_set(type, status);
 #endif
 }
@@ -3933,7 +3573,7 @@ static void coex_schm_status_bit_set_wrapper(uint32_t type, uint32_t status)
 
 static IRAM_ATTR int coex_schm_interval_set_wrapper(uint32_t interval)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_schm_interval_set(interval);
 #else
   return 0;
@@ -3956,7 +3596,7 @@ static IRAM_ATTR int coex_schm_interval_set_wrapper(uint32_t interval)
 
 static uint32_t coex_schm_interval_get_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_schm_interval_get();
 #else
   return 0;
@@ -3979,7 +3619,7 @@ static uint32_t coex_schm_interval_get_wrapper(void)
 
 static uint8_t coex_schm_curr_period_get_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_schm_curr_period_get();
 #else
   return 0;
@@ -4002,7 +3642,7 @@ static uint8_t coex_schm_curr_period_get_wrapper(void)
 
 static void *coex_schm_curr_phase_get_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_schm_curr_phase_get();
 #else
   return NULL;
@@ -4026,7 +3666,7 @@ static void *coex_schm_curr_phase_get_wrapper(void)
 
 static int coex_register_start_cb_wrapper(int (* cb)(void))
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_register_start_cb(cb);
 #else
   return 0;
@@ -4050,7 +3690,7 @@ static int coex_register_start_cb_wrapper(int (* cb)(void))
 
 static int coex_schm_process_restart_wrapper(void)
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_schm_process_restart();
 #else
   return 0;
@@ -4075,7 +3715,7 @@ static int coex_schm_process_restart_wrapper(void)
 
 static int coex_schm_register_cb_wrapper(int type, int(*cb)(int))
 {
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
   return coex_schm_register_callback(type, cb);
 #else
   return 0;
@@ -4138,6 +3778,33 @@ static uint8_t coex_schm_flexible_period_get_wrapper(void)
 }
 
 /****************************************************************************
+ * Name: coex_schm_get_phase_by_idx_wrapper
+ *
+ * Description:
+ *   This is a wrapper for coex_schm_get_phase_by_idx. If software
+ *   coexistence is enabled (CONFIG_SW_COEXIST_ENABLE), it calls the function
+ *   to get the coexistence phase by index. If software coexistence is not
+ *   enabled, it returns NULL.
+ *
+ * Input Parameters:
+ *   phase_idx - Index of the coexistence phase to retrieve
+ *
+ * Returned Value:
+ *   If software coexistence is enabled, returns pointer to the coexistence
+ *   phase. Otherwise returns NULL.
+ *
+ ****************************************************************************/
+
+static void * coex_schm_get_phase_by_idx_wrapper(int phase_idx)
+{
+#if CONFIG_SW_COEXIST_ENABLE
+  return coex_schm_get_phase_by_idx(phase_idx);
+#else
+  return NULL;
+#endif
+}
+
+/****************************************************************************
  * Name: esp_random_ulong
  *
  * Description:
@@ -4166,8 +3833,8 @@ static unsigned long esp_random_ulong(void)
  *   ifidx    - The interface id that the tx callback has been triggered from
  *   data     - Pointer to the data transmitted
  *   data_len - Length of the data transmitted
- *   txstatus - True:if the data was transmitted sucessfully False: if data
- *              transmission failed
+ *   txstatus - True: if the data was transmitted successfully, False: if
+ *              data transmission failed.
  *
  * Returned Value:
  *   none
@@ -4177,7 +3844,7 @@ static unsigned long esp_random_ulong(void)
 static IRAM_ATTR void esp_wifi_tx_done_cb(uint8_t ifidx, uint8_t *data,
                                           uint16_t *len, bool txstatus)
 {
-#ifdef ESP32S3_WLAN_HAS_STA
+#ifdef ESPRESSIF_WLAN_HAS_STA
   if (ifidx == ESP_IF_WIFI_STA)
     {
       if (g_sta_txdone_cb)
@@ -4186,9 +3853,9 @@ static IRAM_ATTR void esp_wifi_tx_done_cb(uint8_t ifidx, uint8_t *data,
         }
     }
   else
-#endif /* ESP32S3_WLAN_HAS_STA */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
 
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
+#ifdef ESPRESSIF_WLAN_HAS_SOFTAP
   if (ifidx == ESP_IF_WIFI_AP)
     {
       if (g_softap_txdone_cb)
@@ -4197,13 +3864,13 @@ static IRAM_ATTR void esp_wifi_tx_done_cb(uint8_t ifidx, uint8_t *data,
         }
     }
   else
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
+#endif /* ESPRESSIF_WLAN_HAS_SOFTAP */
     {
       wlerr("ifidx=%d is error\n", ifidx);
     }
 }
 
-#ifdef ESP32S3_WLAN_HAS_STA
+#ifdef ESPRESSIF_WLAN_HAS_STA
 
 /****************************************************************************
  * Name: esp_wifi_auth_trans
@@ -4244,7 +3911,8 @@ static int esp_wifi_auth_trans(uint32_t wifi_auth)
         break;
 
       default:
-        wlerr("Failed to transfer wireless authmode: %d", wifi_auth);
+        wlerr("Failed to transfer wireless authmode: %" PRIu32 "",
+              wifi_auth);
         break;
     }
 
@@ -4297,7 +3965,7 @@ static int esp_wifi_cipher_trans(uint32_t wifi_cipher)
         break;
 
       default:
-        wlerr("Failed to transfer wireless authmode: %d",
+        wlerr("Failed to transfer wireless authmode: %" PRIu32 "",
                wifi_cipher);
         break;
     }
@@ -4305,7 +3973,7 @@ static int esp_wifi_cipher_trans(uint32_t wifi_cipher)
   return cipher_mode;
 }
 
-#endif /* ESP32S3_WLAN_HAS_STA */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
 
 /****************************************************************************
  * Name: esp_freq_to_channel
@@ -4492,8 +4160,8 @@ int32_t esp_event_send_internal(esp_event_base_t event_base,
 {
   int32_t ret;
 
-  ret = esp_event_post(event_base, event_id, event_data,
-                       event_data_size, ticks_to_wait);
+  ret = esp_event_post(event_base, event_id, event_data, event_data_size,
+                       ticks_to_wait);
 
   return ret;
 }
@@ -4515,97 +4183,6 @@ int32_t esp_event_send_internal(esp_event_base_t event_base,
 void esp_wifi_free_eb(void *eb)
 {
   esp_wifi_internal_free_rx_buffer(eb);
-}
-
-/****************************************************************************
- * Name: esp_wifi_notify_subscribe
- *
- * Description:
- *   Enable event notification
- *
- * Input Parameters:
- *   pid   - Task PID
- *   event - Signal event data pointer
- *
- * Returned Value:
- *   0 if success or -1 if fail
- *
- ****************************************************************************/
-
-int esp_wifi_notify_subscribe(pid_t pid, struct sigevent *event)
-{
-  int id;
-  struct wifi_notify *notify;
-  int ret = -1;
-
-  wlinfo("PID=%d event=%p\n", pid, event);
-
-  esp_wifi_lock(true);
-
-  if (event->sigev_notify == SIGEV_SIGNAL)
-    {
-      id = esp_event_id_map(event->sigev_signo);
-      if (id < 0)
-        {
-          wlerr("No process event %d\n", event->sigev_signo);
-        }
-      else
-        {
-          notify = &g_wifi_notify[id];
-
-          if (notify->assigned)
-            {
-              wlerr("sigev_signo %d has subscribed\n",
-                    event->sigev_signo);
-            }
-          else
-            {
-              if (pid == 0)
-                {
-                  pid = nxsched_gettid();
-                  wlinfo("Actual PID=%d\n", pid);
-                }
-
-              notify->pid = pid;
-              notify->event = *event;
-              notify->assigned = true;
-
-              ret = 0;
-            }
-        }
-    }
-  else if (event->sigev_notify == SIGEV_NONE)
-    {
-      id = esp_event_id_map(event->sigev_signo);
-      if (id < 0)
-        {
-          wlerr("No process event %d\n", event->sigev_signo);
-        }
-      else
-        {
-          notify = &g_wifi_notify[id];
-
-          if (!notify->assigned)
-            {
-              wlerr("sigev_signo %d has not subscribed\n",
-                    event->sigev_signo);
-            }
-          else
-            {
-              notify->assigned = false;
-
-              ret = 0;
-            }
-        }
-    }
-  else
-    {
-      wlerr("sigev_notify %d is invalid\n", event->sigev_signo);
-    }
-
-  esp_wifi_lock(false);
-
-  return ret;
 }
 
 /****************************************************************************
@@ -4637,32 +4214,32 @@ int esp_wifi_adapter_init(void)
       return OK;
     }
 
-  sq_init(&g_wifi_evt_queue);
+  esp_init_event_queue();
 
   wifi_cfg.nvs_enable = 0;
 
-#ifdef CONFIG_ESP32S3_WIFI_TX_AMPDU
+#ifdef CONFIG_ESPRESSIF_WIFI_TX_AMPDU
   wifi_cfg.ampdu_tx_enable = 1;
 #else
   wifi_cfg.ampdu_tx_enable = 0;
 #endif
 
-#ifdef CONFIG_ESP32S3_WIFI_RX_AMPDU
+#ifdef CONFIG_ESPRESSIF_WIFI_RX_AMPDU
   wifi_cfg.ampdu_rx_enable = 1;
 #else
   wifi_cfg.ampdu_rx_enable = 0;
 #endif
 
-#ifdef CONFIG_ESP32S3_WIFI_STA_DISCONNECT_PM
+#ifdef CONFIG_ESPRESSIF_WIFI_STA_DISCONNECT_PM
   wifi_cfg.sta_disconnected_pm = true;
 #else
   wifi_cfg.sta_disconnected_pm = false;
 #endif
 
-  wifi_cfg.rx_ba_win          = CONFIG_ESP32S3_WIFI_RXBA_AMPDU_WZ;
-  wifi_cfg.static_rx_buf_num  = CONFIG_ESP32S3_WIFI_STATIC_RXBUF_NUM;
-  wifi_cfg.dynamic_rx_buf_num = CONFIG_ESP32S3_WIFI_DYNAMIC_RXBUF_NUM;
-  wifi_cfg.dynamic_tx_buf_num = CONFIG_ESP32S3_WIFI_DYNAMIC_TXBUF_NUM;
+  wifi_cfg.rx_ba_win          = CONFIG_ESPRESSIF_WIFI_RXBA_AMPDU_WZ;
+  wifi_cfg.static_rx_buf_num  = CONFIG_ESPRESSIF_WIFI_STATIC_RXBUF_NUM;
+  wifi_cfg.dynamic_rx_buf_num = CONFIG_ESPRESSIF_WIFI_DYNAMIC_RXBUF_NUM;
+  wifi_cfg.dynamic_tx_buf_num = CONFIG_ESPRESSIF_WIFI_DYNAMIC_TXBUF_NUM;
 
   ret = esp_wifi_init(&wifi_cfg);
   if (ret)
@@ -4700,7 +4277,7 @@ errout_init_wifi:
  * Station functions
  ****************************************************************************/
 
-#ifdef ESP32S3_WLAN_HAS_STA
+#ifdef ESPRESSIF_WLAN_HAS_STA
 
 /****************************************************************************
  * Name: esp_wifi_sta_start
@@ -4730,13 +4307,13 @@ int esp_wifi_sta_start(void)
       wlinfo("Failed to stop Wi-Fi ret=%d\n", ret);
     }
 
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
+#ifdef ESPRESSIF_WLAN_HAS_SOFTAP
   if (g_softap_started)
     {
       mode = WIFI_MODE_APSTA;
     }
   else
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
+#endif /* ESPRESSIF_WLAN_HAS_SOFTAP */
     {
       mode = WIFI_MODE_STA;
     }
@@ -4795,7 +4372,7 @@ int esp_wifi_sta_stop(void)
 
   g_sta_started = false;
 
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
+#ifdef ESPRESSIF_WLAN_HAS_SOFTAP
   if (g_softap_started)
     {
       ret = esp_wifi_set_mode(WIFI_MODE_AP);
@@ -4814,13 +4391,13 @@ int esp_wifi_sta_stop(void)
           goto errout;
         }
     }
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
+#endif /* ESPRESSIF_WLAN_HAS_SOFTAP */
 
   wlinfo("OK to stop Wi-Fi station\n");
 
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
+#ifdef ESPRESSIF_WLAN_HAS_SOFTAP
 errout:
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
+#endif /* ESPRESSIF_WLAN_HAS_SOFTAP */
 
   esp_wifi_lock(false);
   return ret;
@@ -4842,7 +4419,7 @@ errout:
  *
  ****************************************************************************/
 
-int esp_wifi_sta_send_data(void *pbuf, uint32_t len)
+int esp_wifi_sta_send_data(void *pbuf, size_t len)
 {
   int ret;
 
@@ -5695,7 +5272,7 @@ int esp_wifi_sta_bitrate(struct iwreq *iwr, bool set)
   return OK;
 }
 
-#endif /* ESP32S3_WLAN_HAS_STA */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
 
 /****************************************************************************
  * Name: esp_wifi_sta_get_txpower
@@ -5898,7 +5475,7 @@ int esp_wifi_sta_country(struct iwreq *iwr, bool set)
   return OK;
 }
 
-#ifdef ESP32S3_WLAN_HAS_STA
+#ifdef ESPRESSIF_WLAN_HAS_STA
 
 /****************************************************************************
  * Name: esp_wifi_sta_rssi
@@ -5945,13 +5522,13 @@ int esp_wifi_sta_rssi(struct iwreq *iwr, bool set)
 
   return OK;
 }
-#endif /* ESP32S3_WLAN_HAS_STA */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
 
 /****************************************************************************
  * SoftAP functions
  ****************************************************************************/
 
-#ifdef ESP32S3_WLAN_HAS_SOFTAP
+#ifdef ESPRESSIF_WLAN_HAS_SOFTAP
 
 /****************************************************************************
  * Name: esp_wifi_softap_start
@@ -5981,13 +5558,13 @@ int esp_wifi_softap_start(void)
       wlinfo("Failed to stop Wi-Fi ret=%d\n", ret);
     }
 
-#ifdef ESP32S3_WLAN_HAS_STA
+#ifdef ESPRESSIF_WLAN_HAS_STA
   if (g_sta_started)
     {
       mode = WIFI_MODE_APSTA;
     }
   else
-#endif /* ESP32S3_WLAN_HAS_STA */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
     {
       mode = WIFI_MODE_AP;
     }
@@ -6046,7 +5623,7 @@ int esp_wifi_softap_stop(void)
 
   g_softap_started = false;
 
-#ifdef ESP32S3_WLAN_HAS_STA
+#ifdef ESPRESSIF_WLAN_HAS_STA
   if (g_sta_started)
     {
       ret = esp_wifi_set_mode(WIFI_MODE_STA);
@@ -6065,13 +5642,13 @@ int esp_wifi_softap_stop(void)
           goto errout;
         }
     }
-#endif /* ESP32S3_WLAN_HAS_STA */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
 
   wlinfo("OK to stop Wi-Fi SoftAP\n");
 
-#ifdef ESP32S3_WLAN_HAS_STA
+#ifdef ESPRESSIF_WLAN_HAS_STA
 errout:
-#endif /* ESP32S3_WLAN_HAS_STA */
+#endif /* ESPRESSIF_WLAN_HAS_STA */
 
   esp_wifi_lock(false);
   return ret;
@@ -6217,7 +5794,7 @@ int esp_wifi_softap_password(struct iwreq *iwr, bool set)
 
       if (ext->alg != IW_ENCODE_ALG_NONE)
         {
-          memcpy(wifi_cfg.sta.password, pdata, len);
+          memcpy(wifi_cfg.ap.password, pdata, len);
         }
 
       if (g_softap_started)
@@ -6710,13 +6287,13 @@ int esp_wifi_softap_rssi(struct iwreq *iwr, bool set)
   return -ENOSYS;
 }
 
-#endif /* ESP32S3_WLAN_HAS_SOFTAP */
+#endif /* ESPRESSIF_WLAN_HAS_SOFTAP */
 
 /****************************************************************************
- * Name: esp32s3_wifi_bt_coexist_init
+ * Name: esp_wifi_bt_coexist_init
  *
  * Description:
- *   Initialize ESP32-S3 Wi-Fi and BT coexistance module.
+ *   Initialize ESP32-S3 Wi-Fi and BT coexistence module.
  *
  * Input Parameters:
  *   None
@@ -6727,15 +6304,15 @@ int esp_wifi_softap_rssi(struct iwreq *iwr, bool set)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
-int esp32s3_wifi_bt_coexist_init(void)
+#ifdef CONFIG_ESPRESSIF_WIFI_BT_COEXIST
+int esp_wifi_bt_coexist_init(void)
 {
   esp_coex_adapter_register(&g_coex_adapter_funcs);
   coex_pre_init();
 
   return 0;
 }
-#endif /* CONFIG_ESP32S3_WIFI_BT_COEXIST */
+#endif /* CONFIG_ESPRESSIF_WIFI_BT_COEXIST */
 
 /****************************************************************************
  * Name: esp_wifi_stop_callback

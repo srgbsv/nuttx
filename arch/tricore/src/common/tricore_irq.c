@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/tricore/src/common/tricore_irq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -90,6 +92,49 @@ void up_enable_irq(int irq)
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
   IfxSrc_init(src, IfxSrc_Tos_cpu0, irq);
+  IfxSrc_enable(src);
+}
+
+#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+
+/****************************************************************************
+ * Name: up_trigger_irq
+ *
+ * Description:
+ *   Trigger an IRQ by software.
+ *
+ ****************************************************************************/
+
+void up_trigger_irq(int irq, cpu_set_t cpuset)
+{
+  (void) cpuset;
+  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
+
+  IfxSrc_setRequest(src);
+}
+
+#endif
+
+/****************************************************************************
+ * Name: up_affinity_irq
+ *
+ * Description:
+ *   Set an IRQ affinity by software.
+ *
+ ****************************************************************************/
+
+void up_affinity_irq(int irq, cpu_set_t cpuset)
+{
+  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
+  int irq_prio = src->B.SRPN;
+
+  IfxSrc_disable(src);
+
+  /* Only support interrupt routing mode 0,
+   * so routing to the first cpu in cpuset.
+   */
+
+  IfxSrc_init(src, ffs(cpuset) - 1, irq_prio);
   IfxSrc_enable(src);
 }
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_arch.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -39,7 +41,7 @@
 #include <sys/param.h>
 #include <nuttx/bits.h>
 
-#include "barriers.h"
+#include <arch/barriers.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -96,6 +98,18 @@
 #define SCTLR_SA_BIT        BIT(3)
 #define SCTLR_I_BIT         BIT(12)
 
+/* Controls the impact of tag check faults
+ * due to loads and stores in EL0 EL1.
+ */
+
+#define SCTLR_TCF0_BIT       BIT(38)
+#define SCTLR_TCF1_BIT       BIT(40)
+
+/* Controlling EL0 EL1 access to assigned tags */
+
+#define SCTLR_ATA0_BIT       BIT(42)
+#define SCTLR_ATA_BIT        BIT(43)
+
 #define ACTLR_AUX_BIT        BIT(9)
 #define ACTLR_CLPORTS_BIT    BIT(8)
 #define ACTLR_CLPMU_BIT      BIT(7)
@@ -134,6 +148,12 @@
 #define SPSR_MODE_EL3T      (0xc)
 #define SPSR_MODE_EL3H      (0xd)
 #define SPSR_MODE_MASK      (0xf)
+
+#define RGSR_EL1_TAG_MASK   0xfUL
+#define RGSR_EL1_SEED_SHIFT 8
+#define RGSR_EL1_SEED_MASK  0xffffUL
+
+#define TTBR_CNP_BIT        BIT(0)
 
 /* CurrentEL: Current Exception Level */
 
@@ -187,12 +207,14 @@
 #define ICC_EOIR0_EL1               S3_0_C12_C8_1
 #define ICC_EOIR1_EL1               S3_0_C12_C12_1
 #define ICC_SGI0R_EL1               S3_0_C12_C11_7
+#define ICC_DIR_EL1                 S3_0_C12_C11_1
 
 /* register constants */
 #define ICC_SRE_ELX_SRE_BIT         BIT(0)
 #define ICC_SRE_ELX_DFB_BIT         BIT(1)
 #define ICC_SRE_ELX_DIB_BIT         BIT(2)
 #define ICC_SRE_EL3_EN_BIT          BIT(3)
+#define ICC_CTLR_EOIMODE_BIT        BIT(1)
 
 /* ICC SGI macros */
 #define SGIR_TGT_MASK               (0xffff)
@@ -243,6 +265,7 @@
 #define HCR_IMO_BIT                 BIT(4)
 #define HCR_AMO_BIT                 BIT(5)
 #define HCR_RW_BIT                  BIT(31)
+#define HCR_ATA_BIT                 BIT(56)
 
 /* CNTHCTL_EL2 bits definitions */
 
@@ -300,13 +323,13 @@ static inline uint8_t getreg8(unsigned long addr)
 
   __asm__ volatile ("ldrb %w0, [%1]" : "=r" (val) : "r" (addr));
 
-  ARM64_DMB();
+  UP_DMB();
   return val;
 }
 
 static inline void putreg8(uint8_t data, unsigned long addr)
 {
-  ARM64_DMB();
+  UP_DMB();
   __asm__ volatile ("strb %w0, [%1]" : : "r" (data), "r" (addr));
 }
 
@@ -316,13 +339,13 @@ static inline uint16_t getreg16(unsigned long addr)
 
   __asm__ volatile ("ldrh %w0, [%1]" : "=r" (val) : "r" (addr));
 
-  ARM64_DMB();
+  UP_DMB();
   return val;
 }
 
 static inline void putreg16(uint16_t data, unsigned long addr)
 {
-  ARM64_DMB();
+  UP_DMB();
   __asm__ volatile ("strh %w0, [%1]" : : "r" (data), "r" (addr));
 }
 
@@ -332,13 +355,13 @@ static inline uint32_t getreg32(unsigned long addr)
 
   __asm__ volatile ("ldr %w0, [%1]" : "=r" (val) : "r" (addr));
 
-  ARM64_DMB();
+  UP_DMB();
   return val;
 }
 
 static inline void putreg32(uint32_t data, unsigned long addr)
 {
-  ARM64_DMB();
+  UP_DMB();
   __asm__ volatile ("str %w0, [%1]" : : "r" (data), "r" (addr));
 }
 
@@ -348,13 +371,13 @@ static inline uint64_t getreg64(unsigned long addr)
 
   __asm__ volatile ("ldr %x0, [%1]" : "=r" (val) : "r" (addr));
 
-  ARM64_DMB();
+  UP_DMB();
   return val;
 }
 
 static inline void putreg64(uint64_t data, unsigned long addr)
 {
-  ARM64_DMB();
+  UP_DMB();
   __asm__ volatile ("str %x0, [%1]" : : "r" (data), "r" (addr));
 }
 
@@ -470,7 +493,7 @@ void arm64_cpu_enable(void);
 #ifdef CONFIG_SMP
 uint64_t arm64_get_mpid(int cpu);
 #else
-#  define arm64_get_mpid(cpu) (GET_MPIDR() & MPIDR_ID_MASK)
+#  define arm64_get_mpid(cpu) ((void)(cpu), (GET_MPIDR() & MPIDR_ID_MASK))
 #endif /* CONFIG_SMP */
 
 /****************************************************************************
@@ -484,6 +507,16 @@ uint64_t arm64_get_mpid(int cpu);
 #ifdef CONFIG_SMP
 int arm64_get_cpuid(uint64_t mpid);
 #endif
+
+/****************************************************************************
+ * Name: arm64_mte_init
+ *
+ * Description:
+ *   Initialize MTE settings and enable memory tagging
+ *
+ ****************************************************************************/
+
+void arm64_mte_init(void);
 
 #endif /* __ASSEMBLY__ */
 

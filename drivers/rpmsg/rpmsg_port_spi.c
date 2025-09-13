@@ -42,8 +42,8 @@
  ****************************************************************************/
 
 #ifdef CONFIG_RPMSG_PORT_SPI_CRC
-#  define rpmsg_port_spi_crc16(hdr) crc16((FAR uint8_t *)&(hdr)->cmd, \
-                                          (hdr)->len - sizeof((hdr)->crc))
+#  define rpmsg_port_spi_crc16(hdr) crc16ibm((FAR uint8_t *)&(hdr)->cmd, \
+                                             (hdr)->len - sizeof((hdr)->crc))
 #else
 #  define rpmsg_port_spi_crc16(hdr) 0
 #endif
@@ -95,7 +95,7 @@ struct rpmsg_port_spi_s
   uint16_t                       rxavail;
   uint16_t                       rxthres;
 
-  atomic_int                     transferring;
+  atomic_t                       transferring;
 };
 
 /****************************************************************************
@@ -300,7 +300,7 @@ static void rpmsg_port_spi_complete_handler(FAR void *arg)
     }
 
 out:
-  if (atomic_exchange(&rpspi->transferring, 0) > 1)
+  if (atomic_xchg(&rpspi->transferring, 0) > 1)
     {
       rpmsg_port_spi_exchange(rpspi);
     }

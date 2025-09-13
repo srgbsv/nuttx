@@ -50,6 +50,7 @@
 #define lib_stream_puts(stream, buf, len) \
         ((FAR struct lib_outstream_s *)(stream))->puts( \
         (FAR struct lib_outstream_s *)(stream), buf, len)
+#define lib_stream_eof(c) ((c) <= 0)
 #define lib_stream_getc(stream) \
         ((FAR struct lib_instream_s *)(stream))->getc( \
         (FAR struct lib_instream_s *)(stream))
@@ -210,10 +211,16 @@ struct lib_rawoutstream_s
   int                    fd;
 };
 
+struct lib_fileinstream_s
+{
+  struct lib_instream_s  common;
+  struct file            file;
+};
+
 struct lib_fileoutstream_s
 {
   struct lib_outstream_s common;
-  FAR struct file       *file;
+  struct file            file;
 };
 
 struct lib_rawsistream_s
@@ -292,7 +299,7 @@ struct lib_lzfoutstream_s
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 struct lib_blkoutstream_s
 {
-  struct lib_outstream_s common;
+  struct lib_sostream_s  common;
   FAR struct inode      *inode;
   struct geometry        geo;
   FAR unsigned char     *cache;
@@ -303,6 +310,14 @@ struct lib_blkoutstream_s
 struct lib_mtdoutstream_s
 {
   struct lib_outstream_s common;
+  FAR struct inode      *inode;
+  struct mtd_geometry_s  geo;
+  FAR unsigned char     *cache;
+};
+
+struct lib_mtdsostream_s
+{
+  struct lib_sostream_s  common;
   FAR struct inode      *inode;
   struct mtd_geometry_s  geo;
   FAR unsigned char     *cache;
@@ -391,6 +406,36 @@ void lib_stdsostream(FAR struct lib_stdsostream_s *stream,
                      FAR FILE *handle);
 
 /****************************************************************************
+ * Name: lib_fileinstream_open, lib_fileinstream_close,
+ *       lib_fileoutstream_open, lib_fileoutstream_close
+ *
+ * Description:
+ *   Initializes or release a file-based stream instance.
+ *   Defined in lib_fileinstream.c and lib/lib_fileoutstream.c
+ *
+ * Input Parameters:
+ *  For open:
+ *    stream  - User allocated, uninitialized instance of stream struct
+ *             to be initialized.
+ *    path    - Path to the file to be opened.
+ *    oflag   - File open flags.
+ *    mode    - File access mode.
+ *  For close:
+ *    stream  - User allocated, initialized instance of stream struct
+ * Returned Value:
+ *  open: Zero on success; a negated errno value on failure.
+ *  close: None (resource cleanup only).
+ *
+ ****************************************************************************/
+
+int lib_fileinstream_open(FAR struct lib_fileinstream_s *stream,
+                          FAR const char *path, int oflag, mode_t mode);
+void lib_fileinstream_close(FAR struct lib_fileinstream_s *stream);
+int lib_fileoutstream_open(FAR struct lib_fileoutstream_s *stream,
+                           FAR const char *path, int oflag, mode_t mode);
+void lib_fileoutstream_close(FAR struct lib_fileoutstream_s *stream);
+
+/****************************************************************************
  * Name: lib_rawinstream, lib_rawoutstream, lib_rawsistream, and
  *       lib_rawsostream,
  *
@@ -415,8 +460,6 @@ void lib_rawinstream(FAR struct lib_rawinstream_s *stream, int fd);
 void lib_rawoutstream(FAR struct lib_rawoutstream_s *stream, int fd);
 void lib_rawsistream(FAR struct lib_rawsistream_s *stream, int fd);
 void lib_rawsostream(FAR struct lib_rawsostream_s *stream, int fd);
-void lib_fileoutstream(FAR struct lib_fileoutstream_s *stream,
-                       FAR struct file *file);
 
 /****************************************************************************
  * Name: lib_bufferedoutstream
@@ -686,6 +729,46 @@ void lib_mtdoutstream_close(FAR struct lib_mtdoutstream_s *stream);
 #endif
 
 /****************************************************************************
+ * Name: lib_mtdsostream_open
+ *
+ * Description:
+ *  mtd driver seekable outstream backend
+ *
+ * Input Parameters:
+ *   stream   - User allocated, uninitialized instance of struct
+ *                lib_mtdsostream_s to be initialized.
+ *   name     - The full path of mtd device.
+ *
+ * Returned Value:
+ *   Returns zero on success or a negated errno on failure
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+int lib_mtdsostream_open(FAR struct lib_mtdsostream_s *stream,
+                         FAR const char *name);
+#endif
+
+/****************************************************************************
+ * Name: lib_mtdsostream_close
+ *
+ * Description:
+ *  close mtd driver seekable outstream backend
+ *
+ * Input Parameters:
+ *   stream  - User allocated, uninitialized instance of struct
+ *                lib_mtdsostream_s to be initialized.
+ *
+ * Returned Value:
+ *   None (User allocated instance initialized).
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+void lib_mtdsostream_close(FAR struct lib_mtdsostream_s *stream);
+#endif
+
+/****************************************************************************
  * Name: lib_noflush
  *
  * Description:
@@ -775,6 +858,13 @@ int lib_vsprintf(FAR struct lib_outstream_s *stream,
                  FAR const IPTR char *src, va_list ap) printf_like(2, 0);
 
 /****************************************************************************
+ * Name: lib_scanf
+ ****************************************************************************/
+
+int lib_scanf(FAR struct lib_instream_s *stream, FAR int *lastc,
+              FAR const IPTR char *fmt, ...) scanf_like(3, 4);
+
+/****************************************************************************
  * Name: lib_vscanf
  *
  * Description:
@@ -784,7 +874,7 @@ int lib_vsprintf(FAR struct lib_outstream_s *stream,
  ****************************************************************************/
 
 int lib_vscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
-               FAR const IPTR char *src, va_list ap) scanf_like(3, 0);
+               FAR const IPTR char *fmt, va_list ap) scanf_like(3, 0);
 
 /****************************************************************************
  * Name: lib_bscanf

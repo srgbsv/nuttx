@@ -1,6 +1,8 @@
 ############################################################################
 # arch/risc-v/src/common/espressif/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -71,6 +73,10 @@ ifeq ($(CONFIG_ESPRESSIF_DMA),y)
 	CHIP_CSRCS += esp_dma.c
 endif
 
+ifeq ($(CONFIG_ESPRESSIF_EFUSE),y)
+	CHIP_CSRCS += esp_efuse.c
+endif
+
 ifeq ($(CONFIG_ESPRESSIF_TWAI),y)
 	CHIP_CSRCS += esp_twai.c
 endif
@@ -79,8 +85,11 @@ ifeq ($(CONFIG_ESPRESSIF_LEDC),y)
 	CHIP_CSRCS += esp_ledc.c
 endif
 
-ifeq ($(CONFIG_ESP_PCNT_AS_QE),y)
-	CHIP_CSRCS += esp_qencoder.c
+ifeq ($(CONFIG_ESP_PCNT),y)
+	CHIP_CSRCS += esp_pcnt.c
+	ifeq ($(CONFIG_ESP_PCNT_AS_QE),y)
+		CHIP_CSRCS += esp_qencoder.c
+	endif
 endif
 
 ifeq ($(CONFIG_ESPRESSIF_USBSERIAL),y)
@@ -94,17 +103,32 @@ ifeq ($(CONFIG_ESP_RMT),y)
 	endif
 endif
 
+ifeq ($(CONFIG_ESP_SDM),y)
+	CHIP_CSRCS += esp_sdm.c
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_DEDICATED_GPIO),y)
+	CHIP_CSRCS += esp_dedic_gpio.c
+endif
+
 ifeq ($(CONFIG_ESPRESSIF_TEMP),y)
 	CHIP_CSRCS += esp_temperature_sensor.c
 endif
 
 ifeq ($(CONFIG_ESPRESSIF_I2C),y)
-	ifeq ($(CONFIG_ESPRESSIF_I2C_PERIPH),y)
+	ifeq ($(CONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE),y)
 		CHIP_CSRCS += esp_i2c.c
 	endif
 	ifeq ($(CONFIG_ESPRESSIF_I2C_BITBANG),y)
 		CHIP_CSRCS += esp_i2c_bitbang.c
 	endif
+	ifeq ($(CONFIG_ESPRESSIF_I2C_PERIPH_SLAVE_MODE),y)
+		CHIP_CSRCS += esp_i2c_slave.c
+	endif
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_I2S),y)
+CHIP_CSRCS += esp_i2s.c
 endif
 
 ifeq ($(CONFIG_ESPRESSIF_SPI),y)
@@ -128,14 +152,39 @@ endif
 
 ifeq ($(CONFIG_ESP_WIRELESS),y)
 	ifeq ($(CONFIG_ESPRESSIF_WIFI),y)
-		CHIP_CSRCS += esp_wifi_init.c
-		CHIP_CSRCS += esp_wlan.c
+		CHIP_CSRCS += esp_wifi_event_handler.c
+		CHIP_CSRCS += esp_wifi_api.c
+		CHIP_CSRCS += esp_wlan_netdev.c
 	endif
 	CHIP_CSRCS += esp_wifi_utils.c
 endif
 
 ifeq ($(CONFIG_ESP_MCPWM),y)
 	CHIP_CSRCS += esp_mcpwm.c
+endif
+
+ifeq ($(CONFIG_SYSTEM_NXDIAG_ESPRESSIF_CHIP_WO_TOOL),y)
+	CHIP_CSRCS += esp_nxdiag.c
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_ADC),y)
+CHIP_CSRCS += esp_adc.c
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_SHA_ACCELERATOR),y)
+	CHIP_CSRCS += esp_sha.c
+endif
+
+ifeq ($(CONFIG_CRYPTO_CRYPTODEV_HARDWARE),y)
+	CHIP_CSRCS += esp_crypto.c
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_USE_LP_CORE), y)
+	CHIP_CSRCS += esp_ulp.c
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_EFUSE),y)
+	LDFLAGS += -u esp_efuse_startup_include_func
 endif
 
 #############################################################################
@@ -146,7 +195,7 @@ endif
 
 ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
 ifndef ESP_HAL_3RDPARTY_VERSION
-	ESP_HAL_3RDPARTY_VERSION = e3899a2324c8e326db20f99f208e890fdd7a5b92
+	ESP_HAL_3RDPARTY_VERSION = b6fa6c9098318007a61acc7c9f0f180443bb80c2
 endif
 
 ifndef ESP_HAL_3RDPARTY_URL
@@ -176,9 +225,10 @@ chip/$(ESP_HAL_3RDPARTY_REPO):
 	$(Q) $(call CLONE_ESP_HAL_3RDPARTY_REPO)
 	$(Q) echo "Espressif HAL for 3rd Party Platforms: ${ESP_HAL_3RDPARTY_VERSION}"
 	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO) checkout --quiet $(ESP_HAL_3RDPARTY_VERSION)
+	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO) submodule --quiet update --init $(GIT_DEPTH_PARAMETER) components/mbedtls/mbedtls
 ifeq ($(CONFIG_ESP_WIRELESS),y)
 	$(Q) echo "Espressif HAL for 3rd Party Platforms: initializing submodules..."
-	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO) submodule --quiet update --init $(GIT_DEPTH_PARAMETER) components/mbedtls/mbedtls components/esp_phy/lib components/esp_wifi/lib components/bt/controller/lib_esp32c3_family components/esp_coex/lib
+	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO) submodule --quiet update --init $(GIT_DEPTH_PARAMETER) components/esp_phy/lib components/esp_wifi/lib components/bt/controller/lib_esp32c3_family components/esp_coex/lib
 	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO)/components/mbedtls/mbedtls reset --quiet --hard
 	$(Q) echo "Applying patches..."
 	$(Q) cd chip/$(ESP_HAL_3RDPARTY_REPO)/components/mbedtls/mbedtls && git apply ../../../nuttx/patches/components/mbedtls/mbedtls/*.patch
@@ -196,6 +246,10 @@ CHIP_SERIES = $(patsubst "%",%,$(CONFIG_ESPRESSIF_CHIP_SERIES))
 
 include chip/hal_${CHIP_SERIES}.mk
 
+ifeq ($(CONFIG_ESPRESSIF_USE_LP_CORE), y)
+	include common$(DELIM)espressif$(DELIM)/esp_ulp.mk
+endif
+
 ifeq ($(CONFIG_ESP_WIRELESS),y)
 	include common$(DELIM)espressif$(DELIM)Wireless.mk
 endif
@@ -207,7 +261,11 @@ context:: chip/$(ESP_HAL_3RDPARTY_REPO)
 distclean::
 	$(call DELFILE,../include/chip/gpio_sig_map.h)
 	$(call DELFILE,../include/chip/irq.h)
+	$(call DELFILE,../../../vefuse.bin)
 	$(call DELDIR,chip/$(ESP_HAL_3RDPARTY_REPO))
+ifeq ($(CONFIG_ESPRESSIF_USE_LP_CORE),y)
+	$(call DELDIR,chip/ulp)
+endif
 
 INCLUDES += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)common$(DELIM)espressif
 INCLUDES += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)common$(DELIM)espressif$(DELIM)platform_include

@@ -1,6 +1,8 @@
 ##############################################################################
 # arch/arm/src/stm32h5/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -23,25 +25,27 @@
 
 HEAD_ASRC =
 
-# Common ARM and Cortex-M4 files (copied from stm32/Make.defs)
+# Common ARM and Cortex-M33 files
 
 include armv8-m/Make.defs
 
+ifeq ($(CONFIG_STM32H5_PROGMEM),y)
+CHIP_CSRCS += stm32_flash.c
+endif
+
 # Required STM32H5 files
 
-CHIP_ASRCS  =
-CHIP_CSRCS  = stm32_gpio.c
-CHIP_CSRCS += stm32_irq.c stm32_lowputc.c stm32_rcc.c
-CHIP_CSRCS += stm32_serial.c stm32_start.c
-CHIP_CSRCS += stm32_pwr.c stm32_timerisr.c
+CHIP_CSRCS += stm32_gpio.c stm32_irq.c stm32_lowputc.c stm32_rcc.c
+CHIP_CSRCS += stm32_serial.c stm32_start.c stm32_pwr.c stm32_timerisr.c
 CHIP_CSRCS += stm32_lse.c stm32_lsi.c
+CHIP_CSRCS += stm32_uid.c
 
 ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
 CHIP_CSRCS += stm32_idle.c
 endif
 
 ifeq ($(CONFIG_TIMER),y)
-CHIP_CSRCS += stm32h5_tim_lowerhalf.c
+CHIP_CSRCS += stm32_tim_lowerhalf.c
 endif
 
 ifeq ($(CONFIG_STM32H5_I2C),y)
@@ -50,6 +54,46 @@ endif
 
 ifeq ($(CONFIG_ADC),y)
 CHIP_CSRCS += stm32_adc.c
+endif
+
+ifeq ($(CONFIG_STM32H5_FDCAN_CHARDRIVER),y)
+CHIP_CSRCS += stm32_fdcan.c
+endif
+
+ifeq ($(CONFIG_STM32H5_ICACHE),y)
+CHIP_CSRCS += stm32_icache.c
+endif
+
+ifeq ($(CONFIG_STM32H5_SPI),y)
+CHIP_CSRCS += stm32_spi.c
+endif
+
+ifeq ($(CONFIG_STM32H5_QSPI1),y)
+CHIP_CSRCS += stm32_qspi.c
+endif
+
+ifeq ($(CONFIG_STM32H5_TIM),y)
+CHIP_CSRCS += stm32_tim.c
+endif
+
+ifeq ($(CONFIG_STM32H5_HAVE_HSI48),y)
+CHIP_CSRCS += stm32_hsi48.c
+endif
+
+ifeq ($(CONFIG_STM32H5_USBFS),y)
+CHIP_CSRCS += stm32_usbfs.c
+endif
+
+ifeq ($(CONFIG_STM32H5_ETHMAC),y)
+CHIP_CSRCS += stm32_ethernet.c
+endif
+
+ifeq ($(CONFIG_STM32H5_DMA),y)
+CHIP_CSRCS += stm32_dma.c
+endif
+
+ifeq ($(CONFIG_STM32H5_DTS),y)
+CHIP_CSRCS += stm32_dts.c
 endif
 
 # Required chip type specific files

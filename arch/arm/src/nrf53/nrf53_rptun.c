@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/nrf53/nrf53_rptun.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -46,7 +48,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_NRF53_FLASH_PREFETCH
-#  warning rptun doesnt seem to work correctly with FLASH cache enabled
+#  warning rptun does not seem to work correctly with FLASH cache enabled
 #endif
 
 /* Vring configuration parameters */
