@@ -53,6 +53,13 @@ if(POLICY CMP0169)
   cmake_policy(SET CMP0169 OLD)
 endif()
 
+# Find Python 3 interpreter
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+if(NOT Python3_Interpreter_FOUND)
+  message(FATAL_ERROR "Did NOT find Python interpreter.")
+endif()
+
 # Basic CMake configuration ##################################################
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -447,13 +454,11 @@ endif()
 # Setup platform options (this needs to happen after project(), once the
 # toolchain file has been processed)
 
-# Support custom Toolchain options by custom Boards
-if(CONFIG_ARCH_BOARD_CUSTOM)
-  if(EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake
-     AND EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
-    # must be added AFTER ToolchainFile and BEFORE platform
-    include(${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
-  endif()
+# Support board Toolchain options
+if(EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake
+   AND EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
+  # must be added AFTER ToolchainFile and BEFORE platform
+  include(${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
 endif()
 
 include(platform)
@@ -557,6 +562,16 @@ add_definitions(-D__NuttX__)
 
 add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-D__ASSEMBLY__>)
 
+if(CONFIG_ARCH_TOOLCHAIN_TASKING)
+  if(CONFIG_INTELHEX_BINARY)
+    add_link_options(-Wl-onuttx.hex:IHEX:4 --hex-format=s)
+  endif()
+
+  if(CONFIG_MOTOROLA_SREC)
+    add_link_options(-Wl-onuttx.srec:SREC:4)
+  endif()
+endif()
+
 set_property(
   TARGET nuttx
   APPEND
@@ -625,7 +640,7 @@ process_all_directory_romfs()
 get_property(ldscript GLOBAL PROPERTY LD_SCRIPT)
 
 # Pre-compile linker script
-if(NOT CONFIG_ARCH_SIM AND NOT CONFIG_ARCH_TOOLCHAIN_TASKING)
+if(NOT CONFIG_ARCH_SIM)
   get_filename_component(LD_SCRIPT_NAME ${ldscript} NAME)
   set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
 
