@@ -244,6 +244,10 @@
 
 #define STM32_RCC_D3CCIPR_ADCSRC     RCC_D3CCIPR_ADCSEL_PLL2
 
+/* FDCAN 1 2 clock source - HSE (TODO: Not the best choice for this board?) */
+
+#define STM32_RCC_D2CCIP1R_FDCANSEL  RCC_D2CCIP1R_FDCANSEL_HSE   /* FDCAN 1 2 clock source */
+
 /* FLASH wait states
  *
  *  ------------ ---------- -----------
@@ -489,6 +493,16 @@
 
 #define DMAMAP_USART6_RX DMAMAP_DMA12_USART6RX_1
 #define DMAMAP_USART6_TX DMAMAP_DMA12_USART6TX_0
+
+/* FDCAN1 */
+
+#define GPIO_CAN1_RX      (GPIO_CAN1_RX_3|GPIO_SPEED_50MHz)      /* PD0 */
+#define GPIO_CAN1_TX      (GPIO_CAN1_TX_3|GPIO_SPEED_50MHz)      /* PD1 */
+
+/* FDCAN2 */
+
+#define GPIO_CAN2_RX      (GPIO_CAN2_RX_2|GPIO_SPEED_50MHz)      /* PB5 - D11 */
+#define GPIO_CAN2_TX      (GPIO_CAN2_TX_2|GPIO_SPEED_50MHz)      /* PB6 - D1 */
 
 /****************************************************************************
  * Public Data
