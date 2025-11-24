@@ -114,4 +114,8 @@ ifeq ($(CONFIG_MMCSD),y)
 CSRCS += stm32_mmcsd.c
 endif
 
+ifeq ($(CONFIG_SENSORS_QENCODER),y)
+CSRCS += stm32_qencoder.c
+endif
+
 include $(TOPDIR)/boards/Board.mk

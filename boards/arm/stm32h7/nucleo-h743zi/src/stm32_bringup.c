@@ -76,6 +76,10 @@
 #include "stm32_fdcan_sock.h"
 #endif
 
+#ifdef CONFIG_SENSORS_QENCODER
+#include "stm32_qencoder.h"
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -500,6 +504,41 @@ int stm32_bringup(void)
   stm32_fdcansockinitialize(1);
 #  endif
 
+#endif
+
+#ifdef CONFIG_SENSORS_QENCODER
+#ifdef CONFIG_STM32H7_TIM1_QE
+  ret = stm32_qeinitialize("/dev/qe0", 1);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
+             ret);
+      return ret;
+    }
+#endif
+
+#ifdef CONFIG_STM32H7_TIM3_QE
+  ret = stm32_qeinitialize("/dev/qe2", 3);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
+             ret);
+      return ret;
+    }
+#endif
+
+#ifdef CONFIG_STM32H7_TIM4_QE
+  ret = stm32_qeinitialize("/dev/qe3", 4);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
+             ret);
+      return ret;
+    }
+#endif
 #endif
 
   return OK;

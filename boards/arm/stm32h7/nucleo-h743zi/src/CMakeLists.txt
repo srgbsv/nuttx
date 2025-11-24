@@ -92,6 +92,10 @@ if(CONFIG_PWM)
   list(APPEND SRCS stm32_pwm.c)
 endif()
 
+if(CONFIG_SENSORS_QENCODER)
+  list(APPEND SRCS stm32_qencoder.c)
+endif()
+
 if(CONFIG_BOARDCTL_RESET)
   list(APPEND SRCS stm32_reset.c)
 endif()
