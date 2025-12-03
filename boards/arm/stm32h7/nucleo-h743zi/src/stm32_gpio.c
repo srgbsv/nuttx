@@ -115,6 +115,8 @@ static struct stm32gpio_dev_s g_gpin[BOARD_NGPIOIN];
 static const uint32_t g_gpiooutputs[BOARD_NGPIOOUT] =
 {
   GPIO_OUT1,
+  GPIO_OUT2,
+  GPIO_OUT3
 };
 
 static struct stm32gpio_dev_s g_gpout[BOARD_NGPIOOUT];
@@ -137,27 +139,32 @@ static struct stm32gpint_dev_s g_gpint[BOARD_NGPIOINT];
 
 static int stm32gpio_interrupt(int irq, void *context, void *arg)
 {
-  struct stm32gpint_dev_s *stm32gpint =
-    (struct stm32gpint_dev_s *)arg;
+  #if BOARD_NGPIOINT > 0
+    struct stm32gpint_dev_s *stm32gpint =
+      (struct stm32gpint_dev_s *)arg;
 
-  DEBUGASSERT(stm32gpint != NULL && stm32gpint->callback != NULL);
-  gpioinfo("Interrupt! callback=%p\n", stm32gpint->callback);
+    DEBUGASSERT(stm32gpint != NULL && stm32gpint->callback != NULL);
+    gpioinfo("Interrupt! callback=%p\n", stm32gpint->callback);
 
-  stm32gpint->callback(&stm32gpint->stm32gpio.gpio,
-                       stm32gpint->stm32gpio.id);
+    stm32gpint->callback(&stm32gpint->stm32gpio.gpio,
+                        stm32gpint->stm32gpio.id);
+  #endif
+
   return OK;
 }
 
 static int gpin_read(struct gpio_dev_s *dev, bool *value)
 {
-  struct stm32gpio_dev_s *stm32gpio =
-    (struct stm32gpio_dev_s *)dev;
+  #if BOARD_NGPIOINT > 0
+    struct stm32gpio_dev_s *stm32gpio =
+      (struct stm32gpio_dev_s *)dev;
 
-  DEBUGASSERT(stm32gpio != NULL && value != NULL);
-  DEBUGASSERT(stm32gpio->id < BOARD_NGPIOIN);
-  gpioinfo("Reading...\n");
+    DEBUGASSERT(stm32gpio != NULL && value != NULL);
+    DEBUGASSERT(stm32gpio->id < BOARD_NGPIOIN);
+    gpioinfo("Reading...\n");
 
-  *value = stm32_gpioread(g_gpioinputs[stm32gpio->id]);
+    *value = stm32_gpioread(g_gpioinputs[stm32gpio->id]);
+  #endif
   return OK;
 }
 
@@ -189,37 +196,44 @@ static int gpout_write(struct gpio_dev_s *dev, bool value)
 
 static int gpint_read(struct gpio_dev_s *dev, bool *value)
 {
-  struct stm32gpint_dev_s *stm32gpint =
-    (struct stm32gpint_dev_s *)dev;
+  #if BOARD_NGPIOINT > 0
+    struct stm32gpint_dev_s *stm32gpint =
+      (struct stm32gpint_dev_s *)dev;
 
-  DEBUGASSERT(stm32gpint != NULL && value != NULL);
-  DEBUGASSERT(stm32gpint->stm32gpio.id < BOARD_NGPIOINT);
-  gpioinfo("Reading int pin...\n");
+    DEBUGASSERT(stm32gpint != NULL && value != NULL);
+    DEBUGASSERT(stm32gpint->stm32gpio.id < BOARD_NGPIOINT);
+    gpioinfo("Reading int pin...\n");
 
-  *value = stm32_gpioread(g_gpiointinputs[stm32gpint->stm32gpio.id]);
+    *value = stm32_gpioread(g_gpiointinputs[stm32gpint->stm32gpio.id]);
+  #endif
+
   return OK;
 }
 
 static int gpint_attach(struct gpio_dev_s *dev,
                         pin_interrupt_t callback)
 {
-  struct stm32gpint_dev_s *stm32gpint =
-    (struct stm32gpint_dev_s *)dev;
+  #if BOARD_NGPIOINT > 0
+    struct stm32gpint_dev_s *stm32gpint =
+      (struct stm32gpint_dev_s *)dev;
 
-  gpioinfo("Attaching the callback\n");
+    gpioinfo("Attaching the callback\n");
 
-  /* Make sure the interrupt is disabled */
+    /* Make sure the interrupt is disabled */
 
-  stm32_gpiosetevent(g_gpiointinputs[stm32gpint->stm32gpio.id], false,
-                     false, false, NULL, NULL);
+    stm32_gpiosetevent(g_gpiointinputs[stm32gpint->stm32gpio.id], false,
+                        false, false, NULL, NULL);
 
-  gpioinfo("Attach %p\n", callback);
-  stm32gpint->callback = callback;
+    gpioinfo("Attach %p\n", callback);
+    stm32gpint->callback = callback;
+  #endif
+
   return OK;
 }
 
 static int gpint_enable(struct gpio_dev_s *dev, bool enable)
 {
+  #if BOARD_NGPIOINT > 0
   struct stm32gpint_dev_s *stm32gpint =
     (struct stm32gpint_dev_s *)dev;
 
@@ -242,6 +256,7 @@ static int gpint_enable(struct gpio_dev_s *dev, bool enable)
       stm32_gpiosetevent(g_gpiointinputs[stm32gpint->stm32gpio.id],
                          false, false, false, NULL, NULL);
     }
+  #endif
 
   return OK;
 }
