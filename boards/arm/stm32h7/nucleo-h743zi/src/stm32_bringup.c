@@ -458,14 +458,101 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_PWM
-  /* Initialize PWM and register the PWM device. */
+#if defined(CONFIG_PWM_OUTPUT)
 
-  ret = stm32_pwm_setup();
+  syslog(LOG_ERR, "PWM OUTPUT\n");
+
+#if defined(CONFIG_STM32_TIM1) && defined(CONFIG_STM32_TIM1_PWM)
+  ret = stm32_pwm_out_setup(1);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: stm32_pwm_setup() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 1 failed: %d\n", ret);
+      return ret;
     }
+#endif
+
+#if defined(CONFIG_STM32_TIM2) && defined(CONFIG_STM32_TIM2_PWM)
+  ret = stm32_pwm_out_setup(2);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 2 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+
+#if defined(CONFIG_STM32_TIM3) && defined(CONFIG_STM32_TIM3_PWM)
+  ret = stm32_pwm_out_setup(3);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 3 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+
+#if defined(CONFIG_STM32_TIM4) && defined(CONFIG_STM32_TIM4_PWM)
+  syslog(LOG_ERR, "Try setup PWM OUT 4");
+  ret = stm32_pwm_out_setup(4);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 4 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+
+#if defined(CONFIG_STM32_TIM5) && defined(CONFIG_STM32_TIM5_PWM)
+  syslog(LOG_ERR, "Try setup PWM OUT 5");
+  ret = stm32_pwm_out_setup(5);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 5 failed: %d\n", ret);
+      return ret;
+    }
+
+#endif
+
+#if defined(CONFIG_STM32_TIM6) && defined(CONFIG_STM32_TIM6_PWM)
+  ret = stm32_pwm_out_setup(6);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 6 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+
+#if defined(CONFIG_STM32_TIM7) && defined(CONFIG_STM32_TIM7_PWM)
+  ret = stm32_pwm_out_setup(7);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 7 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+
+#if defined(CONFIG_STM32_TIM8) && defined(CONFIG_STM32_TIM8_PWM)
+  ret = stm32_pwm_out_setup(8);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 8 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+#if defined(CONFIG_STM32_TIM10) && defined(CONFIG_STM32_TIM10_PWM)
+  ret = stm32_pwm_out_setup(10);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 10 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+#if defined(CONFIG_STM32_TIM11) && defined(CONFIG_STM32_TIM11_PWM)
+  ret = stm32_pwm_out_setup(11);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_out_setup timer 11 failed: %d\n", ret);
+      return ret;
+    }
+#endif
+
 #endif
 
 #ifdef CONFIG_CAPTURE

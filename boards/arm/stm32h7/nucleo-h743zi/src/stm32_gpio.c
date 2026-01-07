@@ -104,6 +104,8 @@ static const struct gpio_operations_s gpint_ops =
 static const uint32_t g_gpioinputs[BOARD_NGPIOIN] =
 {
   GPIO_IN1,
+  GPIO_IN2,
+  GPIO_IN3,
 };
 
 static struct stm32gpio_dev_s g_gpin[BOARD_NGPIOIN];
@@ -116,7 +118,6 @@ static const uint32_t g_gpiooutputs[BOARD_NGPIOOUT] =
 {
   GPIO_OUT1,
   GPIO_OUT2,
-  GPIO_OUT3
 };
 
 static struct stm32gpio_dev_s g_gpout[BOARD_NGPIOOUT];

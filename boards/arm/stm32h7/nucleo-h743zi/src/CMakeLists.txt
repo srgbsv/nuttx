@@ -88,8 +88,8 @@ if(CONFIG_DEV_GPIO)
   list(APPEND SRCS stm32_gpio.c)
 endif()
 
-if(CONFIG_PWM)
-  list(APPEND SRCS stm32_pwm.c)
+if(CONFIG_PWM_OUT)
+  list(APPEND SRCS stm32_pwm_out.c)
 endif()
 
 if(CONFIG_SENSORS_QENCODER)
