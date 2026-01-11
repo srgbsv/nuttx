@@ -1918,6 +1918,8 @@ static int fdcan_txavail(struct net_driver_s *dev)
   return OK;
 }
 
+
+
 /****************************************************************************
  * Function: fdcan_netdev_ioctl
  *
@@ -2017,6 +2019,43 @@ static int fdcan_netdev_ioctl(struct net_driver_s *dev, int cmd,
     }
 
   return ret;
+}
+
+
+/* Minimal stubs for dynamic filter support.
+ * Real implementations must be provided by the fdcan driver
+ * to manipulate hardware filters. These stubs avoid linker
+ * errors and return -ENOSYS.
+ */
+
+int stm32_addstdfilter(uint32_t id, uint32_t mask)
+{
+  (void)id;
+  (void)mask;
+  return -ENOSYS;
+}
+
+int stm32_addextfilter(uint32_t id, uint32_t mask)
+{
+  (void)id;
+  (void)mask;
+  return -ENOSYS;
+}
+
+int stm32_clearfilters(void)
+{
+  return -ENOSYS;
+}
+
+int stm32_delextfilter(uint32_t id)
+{
+  (void)id;
+  return -ENOSYS;
+}
+int stm32_delstdfilter(uint32_t id)
+{
+  (void)id;
+  return -ENOSYS;
 }
 #endif /* CONFIG_NETDEV_IOCTL */
 
