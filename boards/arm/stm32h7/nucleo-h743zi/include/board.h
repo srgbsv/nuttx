@@ -433,14 +433,14 @@
 #define GPIO_TIM2_CH4IN   (GPIO_TIM2_CH4IN_1)   /* PB11 */
 
 /* TIM3 - General Purpose 16-bit Timer (4 channels) */
-#define GPIO_TIM3_CH1OUT   (GPIO_TIM3_CH1OUT_1)   /* PA6 */
+#define GPIO_TIM3_CH1OUT   (GPIO_TIM3_CH1OUT_2)   /* PB4 */
 #define GPIO_TIM3_CH2OUT   (GPIO_TIM3_CH2OUT_1)   /* PA7 */
 #define GPIO_TIM3_CH3OUT   (GPIO_TIM3_CH3OUT_1)   /* PB0 */
 #define GPIO_TIM3_CH4OUT   (GPIO_TIM3_CH4OUT_1)   /* PB1 */
 
 /* TIM4 - General Purpose 16-bit Timer (4 channels) */
-#define GPIO_TIM4_CH1OUT   (GPIO_TIM4_CH1OUT_2)   /* PD12 */
-#define GPIO_TIM4_CH2OUT   (GPIO_TIM4_CH2OUT_2)   /* PD13 */
+#define GPIO_TIM4_CH1OUT   (GPIO_TIM4_CH1OUT_1)   /* PD12 */
+#define GPIO_TIM4_CH2OUT   (GPIO_TIM4_CH2OUT_1)   /* PD13 */
 #define GPIO_TIM4_CH3OUT   (GPIO_TIM4_CH3OUT_2)   /* PD14 */
 #define GPIO_TIM4_CH4OUT   (GPIO_TIM4_CH4OUT_2)   /* PD15 */
 

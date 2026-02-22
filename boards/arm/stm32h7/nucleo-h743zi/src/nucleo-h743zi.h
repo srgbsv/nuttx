@@ -181,7 +181,7 @@
 #define GPIO_IN3         (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTE | GPIO_PIN5)
 
 #define GPIO_OUT1         (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
-                           GPIO_OUTPUT_SET | GPIO_PORTE | GPIO_PIN6)
+                           GPIO_OUTPUT_SET | GPIO_PORTE | GPIO_PIN8)
 #define GPIO_OUT2         (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
                            GPIO_OUTPUT_SET | GPIO_PORTE | GPIO_PIN7)
 
