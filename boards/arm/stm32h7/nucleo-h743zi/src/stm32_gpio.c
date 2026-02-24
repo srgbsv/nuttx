@@ -106,6 +106,7 @@ static const uint32_t g_gpioinputs[BOARD_NGPIOIN] =
   GPIO_IN1,
   GPIO_IN2,
   GPIO_IN3,
+  GPIO_IN4,
 };
 
 static struct stm32gpio_dev_s g_gpin[BOARD_NGPIOIN];
@@ -156,7 +157,7 @@ static int stm32gpio_interrupt(int irq, void *context, void *arg)
 
 static int gpin_read(struct gpio_dev_s *dev, bool *value)
 {
-  #if BOARD_NGPIOINT > 0
+  #if BOARD_NGPIOIN > 0
     struct stm32gpio_dev_s *stm32gpio =
       (struct stm32gpio_dev_s *)dev;
 
