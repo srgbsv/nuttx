@@ -1812,7 +1812,7 @@ static int spi_hwfeatures(struct spi_dev_s *dev,
   features &= ~HWFEAT_LSBFIRST;
 #endif
 
-#ifdef CONFIG_SPI_TRIGGER
+#if defined(CONFIG_SPI_TRIGGER) && defined(CONFIG_STM32H7_SPI_DMA)
 /* Turn deferred trigger mode on or off.  Only applicable for DMA mode. If a
  * transfer is deferred then the DMA will not actually be triggered until a
  * subsequent call to SPI_TRIGGER to set it off. The thread will be waiting

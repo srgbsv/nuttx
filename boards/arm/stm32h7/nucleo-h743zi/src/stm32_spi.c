@@ -63,6 +63,20 @@ void stm32_spidev_initialize(void)
    *       architecture.
    */
 
+#ifdef CONFIG_STM32H7_SPI1
+#  ifdef CONFIG_MMCSD_SPI
+  spiinfo("Configure GPIO for SPI1 / MMCSD CS\n");
+
+  /* SPI-based MMC/SD chip select; optional card-detect */
+
+  stm32_configgpio(GPIO_MMCSD_CS);
+  stm32_gpiowrite(GPIO_MMCSD_CS, true);
+#    ifdef CONFIG_MMCSD_HAVE_CARDDETECT
+  stm32_configgpio(GPIO_MMCSD_NCD);
+#    endif
+#  endif
+#endif
+
 #ifdef CONFIG_STM32H7_SPI3
   spiinfo("Configure GPIO for SPI3/CS\n");
 
@@ -72,13 +86,15 @@ void stm32_spidev_initialize(void)
   stm32_configgpio(GPIO_NRF24L01_CS);
   stm32_gpiowrite(GPIO_NRF24L01_CS, true);
 #  endif
-#  ifdef CONFIG_MMCSD_SPI
-  /* Configure the SPI-based MMC/SD chip select and card detect GPIO */
+#  if defined(CONFIG_MMCSD_SPI) && CONFIG_NSH_MMCSDSPIPORTNO == 3
+  /* MMC/SD on SPI3: chip select and optional card detect */
 
   stm32_configgpio(GPIO_MMCSD_CS);
   stm32_gpiowrite(GPIO_MMCSD_CS, true);
+#    ifdef CONFIG_MMCSD_HAVE_CARDDETECT
   stm32_configgpio(GPIO_MMCSD_NCD);
-#endif
+#    endif
+#  endif
 #endif
 }
 
@@ -112,13 +128,48 @@ void stm32_spidev_initialize(void)
 void stm32_spi1select(struct spi_dev_s *dev,
                       uint32_t devid, bool selected)
 {
-  spiinfo("devid: %08lx CS: %s\n",
-          (unsigned long)devid, selected ? "assert" : "de-assert");
+  switch (devid)
+    {
+#ifdef CONFIG_MMCSD_SPI
+      case SPIDEV_MMCSD(0):
+        spiinfo("MMCSD CS: %s\n", selected ? "assert" : "de-assert");
+        stm32_gpiowrite(GPIO_MMCSD_CS, !selected);
+        break;
+#endif
+
+      default:
+        spiinfo("devid: %08lx CS: %s\n",
+                (unsigned long)devid, selected ? "assert" : "de-assert");
+        break;
+    }
 }
 
 uint8_t stm32_spi1status(struct spi_dev_s *dev, uint32_t devid)
 {
-  return 0;
+  uint8_t status = 0;
+
+  switch (devid)
+    {
+#ifdef CONFIG_MMCSD_SPI
+      case SPIDEV_MMCSD(0):
+        /* Card-detect optional; without CD assume present. */
+
+#  ifdef CONFIG_MMCSD_HAVE_CARDDETECT
+        if (!stm32_gpioread(GPIO_MMCSD_NCD))
+          {
+            status |= SPI_STATUS_PRESENT;
+          }
+#  else
+        status |= SPI_STATUS_PRESENT;
+#  endif
+        break;
+#endif
+
+      default:
+        break;
+    }
+
+  return status;
 }
 #endif
 
@@ -153,7 +204,7 @@ void stm32_spi3select(struct spi_dev_s *dev,
         break;
 #endif
 
-#ifdef CONFIG_MMCSD_SPI
+#if defined(CONFIG_MMCSD_SPI) && CONFIG_NSH_MMCSDSPIPORTNO == 3
       case SPIDEV_MMCSD(0):
         stm32_gpiowrite(GPIO_MMCSD_CS, !selected);
         break;
@@ -175,12 +226,18 @@ uint8_t stm32_spi3status(struct spi_dev_s *dev, uint32_t devid)
         break;
 #endif
 
-#ifdef CONFIG_MMCSD_SPI
+#if defined(CONFIG_MMCSD_SPI) && CONFIG_NSH_MMCSDSPIPORTNO == 3
       case SPIDEV_MMCSD(0):
+        /* Card-detect optional; without CD assume present. */
 
-        /* Note: SD_DET is pulled high when there's no SD card present. */
-
-        status |= stm32_gpioread(GPIO_MMCSD_NCD);
+#  ifdef CONFIG_MMCSD_HAVE_CARDDETECT
+        if (!stm32_gpioread(GPIO_MMCSD_NCD))
+          {
+            status |= SPI_STATUS_PRESENT;
+          }
+#  else
+        status |= SPI_STATUS_PRESENT;
+#  endif
         break;
 #endif
 

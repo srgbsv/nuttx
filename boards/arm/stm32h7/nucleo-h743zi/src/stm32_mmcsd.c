@@ -44,11 +44,25 @@
 #  error "SD driver requires CONFIG_DISABLE_MOUNTPOINT to be disabled"
 #endif
 
-#ifndef CONFIG_STM32H7_SPI3
-#  error "MMC/SD requires SPI3 enabled"
-#endif
+#if CONFIG_NSH_MMCSDSPIPORTNO == 1
 
-#define MMCSD_SPI_PORT (3)
+#  ifndef CONFIG_STM32H7_SPI1
+#    error "MMC/SD on SPI port 1 requires CONFIG_STM32H7_SPI1"
+#  endif
+
+#  define MMCSD_SPI_PORT (1)
+
+#elif CONFIG_NSH_MMCSDSPIPORTNO == 3
+
+#  ifndef CONFIG_STM32H7_SPI3
+#    error "MMC/SD on SPI port 3 requires CONFIG_STM32H7_SPI3"
+#  endif
+
+#  define MMCSD_SPI_PORT (3)
+
+#else
+#  error "Unsupported CONFIG_NSH_MMCSDSPIPORTNO for nucleo-h743zi (use 1 or 3)"
+#endif
 
 /****************************************************************************
  * Public Functions
