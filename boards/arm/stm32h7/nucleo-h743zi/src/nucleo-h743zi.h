@@ -176,6 +176,7 @@
 /* Example, used free Ports on the board */
 
 #define GPIO_IN1         (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTE | GPIO_PIN2) /* PE2 */
+/* PE3/PE4: open-drain Hall, active low; internal pull-up if no resistor on the sensor. */
 #define GPIO_IN2         (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTE | GPIO_PIN3)   /* PE3 */
 #define GPIO_IN3         (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTE | GPIO_PIN4)   /* PE4 */
 #define GPIO_IN4         (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTE | GPIO_PIN5) /* PE5 */

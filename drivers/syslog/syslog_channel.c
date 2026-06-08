@@ -468,3 +468,25 @@ int syslog_channel_unregister(FAR syslog_channel_t *channel)
   return -EINVAL;
 }
 #endif
+
+#ifndef CONFIG_SYSLOG_REGISTER
+/****************************************************************************
+ * Name: syslog_channel_register
+ ****************************************************************************/
+
+int syslog_channel_register(FAR syslog_channel_t *channel)
+{
+  UNUSED(channel);
+  return -ENOSYS;
+}
+
+/****************************************************************************
+ * Name: syslog_channel_unregister
+ ****************************************************************************/
+
+int syslog_channel_unregister(FAR syslog_channel_t *channel)
+{
+  UNUSED(channel);
+  return -ENOSYS;
+}
+#endif

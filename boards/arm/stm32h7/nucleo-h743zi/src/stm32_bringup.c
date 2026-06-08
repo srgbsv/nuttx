@@ -33,6 +33,9 @@
 #include <arch/board/board.h>
 
 #include <nuttx/fs/fs.h>
+#ifdef CONFIG_SYSLOG_FILE
+#  include <nuttx/syslog/syslog.h>
+#endif
 
 #ifdef CONFIG_USBMONITOR
 #  include <nuttx/usb/usbmonitor.h>
@@ -624,6 +627,31 @@ int stm32_bringup(void)
              "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
+    }
+#endif
+#endif
+
+#ifdef CONFIG_AUTOMOUNT_DISK
+  syslog(LOG_INFO, "Automount disk\n");
+  ret = nx_mount("/dev/mmcsd0", "/mnt", "vfat", 0, NULL);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to mount the disk: %d\n", ret);
+    }
+#ifdef CONFIG_SYSLOG_FILE
+  else
+    {
+      syslog_channel_t *channel;
+
+      channel = syslog_file_channel("/mnt/syslog.txt");
+      if (channel == NULL)
+        {
+          syslog(LOG_ERR, "ERROR: syslog_file_channel() failed\n");
+        }
+      else
+        {
+          syslog(LOG_INFO, "SYSLOG file channel enabled: /mnt/syslog.txt\n");
+        }
     }
 #endif
 #endif
